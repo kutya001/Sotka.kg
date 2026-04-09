@@ -1,0 +1,2114 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+<title>TeleMarket — Каталог телефонов и аксессуаров</title>
+<meta name="description" content="Сравните цены на мобильные телефоны, планшеты и аксессуары. Агрегатор предложений от проверенных продавцов.">
+
+<!-- Leaflet CSS & JS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<link rel="preconnect" href="https://cdn.tailwindcss.com">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      colors: {
+        primary: { 50:'#eff6ff',100:'#dbeafe',200:'#bfdbfe',300:'#93c5fd',400:'#60a5fa',500:'#3b82f6',600:'#2563eb',700:'#1d4ed8',800:'#1e40af',900:'#1e3a8a' },
+        accent: { 50:'#fdf4ff',100:'#fae8ff',200:'#f5d0fe',300:'#f0abfc',400:'#e879f9',500:'#d946ef',600:'#c026d3',700:'#a21caf',800:'#86198f',900:'#701a75' },
+        surface: { 50:'#f8fafc',100:'#f1f5f9',200:'#e2e8f0',300:'#cbd5e1',400:'#94a3b8',500:'#64748b',600:'#475569',700:'#334155',800:'#1e293b',900:'#0f172a' }
+      }
+    }
+  }
+}
+</script>
+<style>
+  @import url('https://cdn.jsdelivr.net/npm/@fontsource/inter@5.0.19/index.css');
+  * { font-family: 'Inter', sans-serif; }
+  ::-webkit-scrollbar { width:6px; height:6px; }
+  ::-webkit-scrollbar-track { background:#f1f5f9; }
+  ::-webkit-scrollbar-thumb { background:#94a3b8; border-radius:3px; }
+  ::-webkit-scrollbar-thumb:hover { background:#64748b; }
+  html { scroll-behavior: smooth; }
+  body { overflow-x: hidden; }
+  .skeleton { background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; }
+  @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+  @keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+  @keyframes slideUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+  @keyframes slideRight { from{opacity:0;transform:translateX(-100%)} to{opacity:1;transform:translateX(0)} }
+  @keyframes slideDown { from{opacity:0;transform:translateY(-10px)} to{opacity:1;transform:translateY(0)} }
+  @keyframes scaleIn { from{opacity:0;transform:scale(0.95)} to{opacity:1;transform:scale(1)} }
+  @keyframes toastIn { from{opacity:0;transform:translateX(100%)} to{opacity:1;transform:translateX(0)} }
+  @keyframes toastOut { from{opacity:1;transform:translateX(0)} to{opacity:0;transform:translateX(100%)} }
+  .animate-fadeIn { animation: fadeIn 0.4s ease-out; }
+  .animate-slideUp { animation: slideUp 0.5s ease-out; }
+  .animate-slideDown { animation: slideDown 0.3s ease-out; }
+  .animate-scaleIn { animation: scaleIn 0.3s ease-out; }
+  .animate-toastIn { animation: toastIn 0.3s ease-out; }
+  .animate-toastOut { animation: toastOut 0.3s ease-out forwards; }
+  .hero-slide { transition: transform 0.6s cubic-bezier(0.25,0.46,0.45,0.94); }
+  .product-card:hover .product-img { transform: scale(1.05); }
+  .product-img { transition: transform 0.4s ease; }
+  .range-slider { -webkit-appearance:none; height:6px; border-radius:3px; outline:none; }
+  .range-slider::-webkit-slider-thumb { -webkit-appearance:none; width:20px; height:20px; border-radius:50%; background:#3b82f6; cursor:pointer; border:2px solid white; box-shadow:0 1px 4px rgba(0,0,0,0.2); }
+  .range-slider::-moz-range-thumb { width:20px; height:20px; border-radius:50%; background:#3b82f6; cursor:pointer; border:2px solid white; box-shadow:0 1px 4px rgba(0,0,0,0.2); }
+  .thumb-active { border-color:#3b82f6; opacity:1; }
+  .offcanvas-overlay { transition: opacity 0.3s ease; }
+  .offcanvas-panel { transition: transform 0.3s cubic-bezier(0.25,0.46,0.45,0.94); }
+  .modal-overlay { transition: opacity 0.2s ease; }
+  .modal-content { transition: transform 0.2s ease, opacity 0.2s ease; }
+  .toast-container { position:fixed; top:80px; right:16px; z-index:9999; display:flex; flex-direction:column; gap:8px; }
+  .tab-active { color:#3b82f6; border-bottom:2px solid #3b82f6; }
+  .badge-pulse { animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.1)} }
+  .mega-menu { opacity:0; visibility:hidden; transform:translateY(-8px); transition: all 0.2s ease; }
+  .mega-menu.show { opacity:1; visibility:visible; transform:translateY(0); }
+  .search-dropdown { opacity:0; visibility:hidden; transform:translateY(-4px); transition: all 0.15s ease; }
+  .search-dropdown.show { opacity:1; visibility:visible; transform:translateY(0); }
+  .star-rating { color:#fbbf24; }
+  .gallery-thumb { cursor:pointer; opacity:0.6; transition:opacity 0.2s; }
+  .gallery-thumb.active { opacity:1; border-color:#3b82f6; }
+  .hamburger-line { transition: all 0.3s ease; }
+  .hamburger-open .hamburger-line:nth-child(1) { transform:rotate(45deg) translate(5px,5px); }
+  .hamburger-open .hamburger-line:nth-child(2) { opacity:0; }
+  .hamburger-open .hamburger-line:nth-child(3) { transform:rotate(-45deg) translate(5px,-5px); }
+  .bottom-nav { display:none; }
+  @media(max-width:767px) {
+    .bottom-nav { display:flex; }
+    .desktop-nav { display:none !important; }
+  }
+  .line-clamp-2 { display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+  .scrollbar-hide::-webkit-scrollbar { display:none; }
+  .scrollbar-hide { -ms-overflow-style:none; scrollbar-width:none; }
+  .gradient-text { background:linear-gradient(135deg,#3b82f6,#8b5cf6); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+  .glass-effect { background:rgba(255,255,255,0.8); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); }
+  
+  /* Leaflet Map Overrides */
+  .leaflet-container { z-index: 10; font-family: 'Inter', sans-serif; }
+  .leaflet-popup-content-wrapper { border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); }
+  .highlight-marker { filter: hue-rotate(180deg) saturate(200%); }
+</style>
+</head>
+<body class="bg-surface-50 text-surface-800 min-h-screen flex flex-col">
+
+<!-- Toast Container -->
+<div id="toastContainer" class="toast-container"></div>
+
+<!-- Auth Modal -->
+<div id="authModal" class="fixed inset-0 z-50 hidden">
+  <div class="modal-overlay absolute inset-0 bg-black/50" onclick="closeAuthModal()"></div>
+  <div class="modal-content relative max-w-md mx-auto mt-20 bg-white rounded-2xl shadow-2xl p-6 animate-scaleIn">
+    <button onclick="closeAuthModal()" class="absolute top-4 right-4 text-surface-400 hover:text-surface-600 transition-colors">
+      <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+    </button>
+    <div id="authModalContent"></div>
+  </div>
+</div>
+
+<!-- Used Photos Modal -->
+<div id="usedPhotosModal" class="fixed inset-0 z-50 hidden">
+  <div class="modal-overlay absolute inset-0 bg-black/70" onclick="closeUsedPhotosModal()"></div>
+  <div class="modal-content relative max-w-2xl mx-auto mt-16 bg-white rounded-2xl shadow-2xl p-4 animate-scaleIn max-h-[80vh] overflow-y-auto">
+    <button onclick="closeUsedPhotosModal()" class="absolute top-4 right-4 text-white bg-black/50 rounded-full p-1 hover:bg-black/70 transition-colors">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+    </button>
+    <div id="usedPhotosContent"></div>
+  </div>
+</div>
+
+<!-- Offcanvas Filters (Mobile) -->
+<div id="offcanvasOverlay" class="offcanvas-overlay fixed inset-0 bg-black/50 z-40 hidden" onclick="closeOffcanvas()"></div>
+<div id="offcanvasPanel" class="offcanvas-panel fixed top-0 left-0 w-full max-w-sm h-full bg-white z-50 transform -translate-x-full overflow-y-auto">
+  <div class="sticky top-0 bg-white border-b border-surface-200 p-4 flex items-center justify-between z-10">
+    <h3 class="text-lg font-bold">Фильтры</h3>
+    <button onclick="closeOffcanvas()" class="text-surface-400 hover:text-surface-600">
+      <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+    </button>
+  </div>
+  <div id="offcanvasFilters"></div>
+  <div class="sticky bottom-0 bg-white border-t border-surface-200 p-4 space-y-2">
+    <button onclick="applyOffcanvasFilters()" class="w-full bg-primary-600 text-white py-3 rounded-xl font-semibold hover:bg-primary-700 transition-colors">Показать результаты</button>
+    <button onclick="resetAllFilters()" class="w-full border border-surface-300 text-surface-600 py-3 rounded-xl font-semibold hover:bg-surface-50 transition-colors">Сбросить все</button>
+  </div>
+</div>
+
+<!-- Header -->
+<header id="mainHeader" class="sticky top-0 z-30 glass-effect border-b border-surface-200/50">
+  <!-- Top bar -->
+  <div class="hidden md:flex items-center justify-between max-w-7xl mx-auto px-4 py-1.5 text-xs text-surface-500">
+    <div class="flex items-center gap-4">
+      <button onclick="openCityModal()" class="flex items-center gap-1 hover:text-primary-600 transition-colors">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+        <span id="selectedCity">Бишкек</span>
+      </button>
+      <span>Агрегатор цен на телефоны и аксессуары</span>
+    </div>
+    <div class="flex items-center gap-4">
+      <a href="#" class="hover:text-primary-600">О проекте</a>
+      <a href="#" class="hover:text-primary-600">Контакты</a>
+    </div>
+  </div>
+  <!-- Main header -->
+  <div class="max-w-7xl mx-auto px-4 py-3">
+    <div class="flex items-center gap-3 md:gap-6">
+      <!-- Mobile hamburger -->
+      <button class="md:hidden p-1" onclick="toggleMobileMenu()" id="hamburgerBtn">
+        <div class="w-6 h-5 flex flex-col justify-between">
+          <span class="hamburger-line block h-0.5 w-full bg-surface-700"></span>
+          <span class="hamburger-line block h-0.5 w-full bg-surface-700"></span>
+          <span class="hamburger-line block h-0.5 w-full bg-surface-700"></span>
+        </div>
+      </button>
+      <!-- Logo -->
+      <a href="#/" class="flex items-center gap-2 flex-shrink-0" onclick="navigate('/')">
+        <div class="w-9 h-9 bg-gradient-to-br from-primary-500 to-accent-500 rounded-xl flex items-center justify-center">
+          <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+        </div>
+        <span class="text-xl font-bold gradient-text hidden sm:block">TeleMarket</span>
+      </a>
+      <!-- Catalog button -->
+      <button onmouseenter="showMegaMenu()" onmouseleave="hideMegaMenu()" class="hidden md:flex items-center gap-2 bg-primary-600 text-white px-4 py-2.5 rounded-xl font-medium hover:bg-primary-700 transition-colors relative">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+        Каталог
+        <!-- Mega Menu -->
+        <div id="megaMenu" class="mega-menu absolute top-full left-0 mt-2 w-[600px] bg-white rounded-2xl shadow-2xl border border-surface-200 p-6">
+          <div class="grid grid-cols-3 gap-4">
+            <div>
+              <h4 class="font-bold text-surface-800 mb-3 flex items-center gap-2">
+                <span class="w-8 h-8 bg-primary-100 rounded-lg flex items-center justify-center text-lg">📱</span> Телефоны
+              </h4>
+              <div class="space-y-1.5 text-sm text-surface-600">
+                <a href="#/catalog?category=smartphones" class="block hover:text-primary-600 transition-colors">Смартфоны</a>
+                <a href="#/catalog?category=smartphones&brand=apple" class="block hover:text-primary-600 transition-colors">Apple iPhone</a>
+                <a href="#/catalog?category=smartphones&brand=samsung" class="block hover:text-primary-600 transition-colors">Samsung Galaxy</a>
+                <a href="#/catalog?category=smartphones&brand=xiaomi" class="block hover:text-primary-600 transition-colors">Xiaomi</a>
+              </div>
+            </div>
+            <div>
+              <h4 class="font-bold text-surface-800 mb-3 flex items-center gap-2">
+                <span class="w-8 h-8 bg-accent-100 rounded-lg flex items-center justify-center text-lg">🎧</span> Аксессуары
+              </h4>
+              <div class="space-y-1.5 text-sm text-surface-600">
+                <a href="#/catalog?category=cases" class="block hover:text-primary-600 transition-colors">Чехлы</a>
+                <a href="#/catalog?category=headphones" class="block hover:text-primary-600 transition-colors">Наушники</a>
+                <a href="#/catalog?category=chargers" class="block hover:text-primary-600 transition-colors">Зарядные устройства</a>
+                <a href="#/catalog?category=glass" class="block hover:text-primary-600 transition-colors">Защитные стёкла</a>
+              </div>
+            </div>
+            <div>
+              <h4 class="font-bold text-surface-800 mb-3 flex items-center gap-2">
+                <span class="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center text-lg">⌚</span> Умные устройства
+              </h4>
+              <div class="space-y-1.5 text-sm text-surface-600">
+                <a href="#/catalog?category=watches" class="block hover:text-primary-600 transition-colors">Смарт-часы</a>
+                <a href="#/catalog?category=tablets" class="block hover:text-primary-600 transition-colors">Планшеты</a>
+                <a href="#/catalog?category=watches&brand=apple" class="block hover:text-primary-600 transition-colors">Apple Watch</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </button>
+      <!-- Search -->
+      <div class="flex-1 relative" id="searchContainer">
+        <div class="relative">
+          <input type="text" id="globalSearch" placeholder="Поиск телефонов, аксессуаров..." class="w-full bg-surface-100 border border-surface-200 rounded-xl py-2.5 pl-10 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all" oninput="handleSearch(this.value)" onfocus="this.parentElement.parentElement.classList.add('ring-2','ring-primary-200')" onblur="setTimeout(()=>this.parentElement.parentElement.classList.remove('ring-2','ring-primary-200'),200)">
+          <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-surface-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+          <button class="absolute right-3 top-1/2 -translate-y-1/2 md:hidden" onclick="handleSearch(document.getElementById('globalSearch').value)">
+            <svg class="w-4 h-4 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+          </button>
+        </div>
+        <!-- Search Dropdown -->
+        <div id="searchDropdown" class="search-dropdown absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-2xl border border-surface-200 max-h-80 overflow-y-auto z-50">
+          <div id="searchResults"></div>
+        </div>
+      </div>
+      <!-- Icons -->
+      <div class="flex items-center gap-1 md:gap-2 flex-shrink-0">
+        <button onclick="navigate('/favorites')" class="relative p-2 rounded-xl hover:bg-surface-100 transition-colors" title="Избранное">
+          <svg class="w-6 h-6 text-surface-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
+          <span id="favBadge" class="absolute -top-0.5 -right-0.5 w-5 h-5 bg-accent-500 text-white text-xs rounded-full flex items-center justify-center font-bold hidden">0</span>
+        </button>
+        <button onclick="openAuthModal()" class="p-2 rounded-xl hover:bg-surface-100 transition-colors" title="Профиль" id="profileBtn">
+          <svg class="w-6 h-6 text-surface-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- Mobile Bottom Navigation -->
+<nav class="bottom-nav fixed bottom-0 left-0 right-0 bg-white border-t border-surface-200 z-30 py-2 px-4 justify-around">
+  <a href="#/" class="flex flex-col items-center gap-0.5 text-xs text-surface-500" onclick="navigate('/')">
+    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+    Главная
+  </a>
+  <a href="#/catalog" class="flex flex-col items-center gap-0.5 text-xs text-surface-500" onclick="navigate('/catalog')">
+    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
+    Каталог
+  </a>
+  <a href="#/favorites" class="flex flex-col items-center gap-0.5 text-xs text-surface-500" onclick="navigate('/favorites')">
+    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
+    Избранное
+  </a>
+  <a href="#" class="flex flex-col items-center gap-0.5 text-xs text-surface-500" onclick="openAuthModal()">
+    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+    Профиль
+  </a>
+</nav>
+
+<!-- Main Content -->
+<main id="app" class="flex-1 pb-16 md:pb-0"></main>
+
+<!-- Footer -->
+<footer class="bg-surface-900 text-surface-300 mt-auto">
+  <div class="max-w-7xl mx-auto px-4 py-10">
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-8">
+      <div>
+        <div class="flex items-center gap-2 mb-4">
+          <div class="w-8 h-8 bg-gradient-to-br from-primary-500 to-accent-500 rounded-lg flex items-center justify-center">
+            <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+          </div>
+          <span class="text-lg font-bold text-white">TeleMarket</span>
+        </div>
+        <p class="text-sm text-surface-400 leading-relaxed">Агрегатор цен на мобильные телефоны, планшеты и аксессуары в Кыргызстане.</p>
+      </div>
+      <div>
+        <h4 class="text-white font-semibold mb-3">Каталог</h4>
+        <ul class="space-y-2 text-sm">
+          <li><a href="#/catalog?category=smartphones" class="hover:text-primary-400 transition-colors">Смартфоны</a></li>
+          <li><a href="#/catalog?category=tablets" class="hover:text-primary-400 transition-colors">Планшеты</a></li>
+          <li><a href="#/catalog?category=headphones" class="hover:text-primary-400 transition-colors">Наушники</a></li>
+          <li><a href="#/catalog?category=watches" class="hover:text-primary-400 transition-colors">Смарт-часы</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4 class="text-white font-semibold mb-3">Информация</h4>
+        <ul class="space-y-2 text-sm">
+          <li><a href="#" class="hover:text-primary-400 transition-colors">О проекте</a></li>
+          <li><a href="#" class="hover:text-primary-400 transition-colors">Контакты</a></li>
+          <li><a href="#" class="hover:text-primary-400 transition-colors">Пользовательское соглашение</a></li>
+          <li><a href="#" class="hover:text-primary-400 transition-colors">Политика конфиденциальности</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4 class="text-white font-semibold mb-3">Контакты</h4>
+        <ul class="space-y-2 text-sm">
+          <li class="flex items-center gap-2"><svg class="w-4 h-4 text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg> info@telemarket.kg</li>
+          <li class="flex items-center gap-2"><svg class="w-4 h-4 text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg> +996 312 123 456</li>
+        </ul>
+      </div>
+    </div>
+    <div class="border-t border-surface-700 mt-8 pt-6 text-center text-xs text-surface-500">
+      © 2026 TeleMarket. Все права защищены.
+    </div>
+  </div>
+</footer>
+
+<script>
+// ===== MOCK DATA =====
+const PRODUCTS = [
+  { id:'p1', name:'Apple iPhone 17 Pro', slug:'apple-iphone-17-pro', brand:'apple', category:'smartphones', label:'Новинка', rating:4.9, reviewsCount:124, images:['https://image.qwenlm.ai/public_source/3b29826f-5bca-49bd-b528-0bbb6460e7d6/14e2f8b9e-dab3-4263-8aa8-9af18ca6742e.png'], specs:{'Экран':'6.3" OLED, 120Hz','Процессор':'Apple A19 Pro','ОЗУ':'8 GB','Камера':'48 MP + 12 MP + 12 MP','Батарея':'3800 mAh','ОС':'iOS 19'}, description:'Apple iPhone 17 Pro — флагманский смартфон с передовой камерой, мощным процессором A19 Pro и инновационным дизайном. Титановый корпус, Always-On дисплей и поддержка всех современных стандартов связи.' },
+  { id:'p2', name:'Samsung Galaxy S25 Ultra', slug:'samsung-galaxy-s25-ultra', brand:'samsung', category:'smartphones', label:'Хит', rating:4.8, reviewsCount:89, images:['https://image.qwenlm.ai/public_source/3b29826f-5bca-49bd-b528-0bbb6460e7d6/1d5f464bb-87e5-4a1e-95b0-66c0a18f289b.png'], specs:{'Экран':'6.9" AMOLED, 120Hz','Процессор':'Snapdragon 8 Gen 4','ОЗУ':'12 GB','Камера':'200 MP + 50 MP + 12 MP + 10 MP','Батарея':'5000 mAh','ОС':'Android 15'}, description:'Samsung Galaxy S25 Ultra — топовый смартфон с S Pen, камерой 200 МП и мощным процессором. Идеален для работы и мультимедиа.' },
+  { id:'p3', name:'Xiaomi 15 Pro', slug:'xiaomi-15-pro', brand:'xiaomi', category:'smartphones', label:'', rating:4.7, reviewsCount:56, images:['https://image.qwenlm.ai/public_source/3b29826f-5bca-49bd-b528-0bbb6460e7d6/1fdc06e62-55f8-4743-a7ed-5e85a6458559.png'], specs:{'Экран':'6.73" AMOLED, 120Hz','Процессор':'Snapdragon 8 Gen 3','ОЗУ':'12 GB','Камера':'50 MP Leica + 50 MP + 50 MP','Батарея':'4880 mAh','ОС':'Android 14, HyperOS'}, description:'Xiaomi 15 Pro с камерой Leica, быстрой зарядкой 120W и премиальным дизайном. Лучшее соотношение цены и качества.' },
+  { id:'p4', name:'Apple iPhone 16', slug:'apple-iphone-16', brand:'apple', category:'smartphones', label:'', rating:4.6, reviewsCount:201, images:['https://image.qwenlm.ai/public_source/3b29826f-5bca-49bd-b528-0bbb6460e7d6/14e2f8b9e-dab3-4263-8aa8-9af18ca6742e.png'], specs:{'Экран':'6.1" OLED, 60Hz','Процессор':'Apple A18','ОЗУ':'6 GB','Камера':'48 MP + 12 MP','Батарея':'3561 mAh','ОС':'iOS 18'}, description:'Apple iPhone 16 — базовая модель с отличной камерой и производительностью. Идеальный выбор для тех, кто хочет iPhone по доступной цене.' },
+  { id:'p5', name:'Samsung Galaxy S24 FE', slug:'samsung-galaxy-s24-fe', brand:'samsung', category:'smartphones', label:'Выгодно', rating:4.5, reviewsCount:134, images:['https://image.qwenlm.ai/public_source/3b29826f-5bca-49bd-b528-0bbb6460e7d6/1d5f464bb-87e5-4a1e-95b0-66c0a18f289b.png'], specs:{'Экран':'6.7" AMOLED, 120Hz','Процессор':'Exynos 2400e','ОЗУ':'8 GB','Камера':'50 MP + 12 MP + 8 MP','Батарея':'4700 mAh','ОС':'Android 14'}, description:'Samsung Galaxy S24 FE — фан-версия флагмана с отличным экраном и камерой по доступной цене.' },
+  { id:'p6', name:'Apple AirPods Pro 3', slug:'apple-airpods-pro-3', brand:'apple', category:'headphones', label:'Новинка', rating:4.9, reviewsCount:78, images:['https://image.qwenlm.ai/public_source/3b29826f-5bca-49bd-b528-0bbb6460e7d6/13c99d60f-7673-4ac4-b7f7-2d5496885e22.png'], specs:{'Тип':'Внутриканальные (TWS)','Шумоподавление':'Активное, адаптивное','Время работы':'6ч + 30ч кейс','Подключение':'Bluetooth 5.4','Защита':'IP54'}, description:'Apple AirPods Pro 3 с улучшенным шумоподавлением, пространственным звуком и новым дизайном.' },
+  { id:'p7', name:'Apple Watch Series 10', slug:'apple-watch-series-10', brand:'apple', category:'watches', label:'Хит', rating:4.8, reviewsCount:45, images:['https://image.qwenlm.ai/public_source/3b29826f-5bca-49bd-b528-0bbb6460e7d6/151fb91eb-9ea7-48e1-be9c-f2b943ced773.png'], specs:{'Экран':'1.9" OLED Always-On','Процессор':'S10 SiP','Защита':'WR50, IP6X','Батарея':'18 часов','Датчики':'SpO2, ЭКГ, температура','ОС':'watchOS 11'}, description:'Apple Watch Series 10 — самые тонкие и лёгкие Apple Watch с передовыми функциями здоровья.' },
+  { id:'p8', name:'Samsung Galaxy Tab S10+', slug:'samsung-galaxy-tab-s10-plus', brand:'samsung', category:'tablets', label:'', rating:4.7, reviewsCount:32, images:['https://image.qwenlm.ai/public_source/3b29826f-5bca-49bd-b528-0bbb6460e7d6/1ba6ad3ba-b937-492c-ba69-145b9e008b2b.png'], specs:{'Экран':'12.4" AMOLED, 120Hz','Процессор':'MediaTek Dimensity 9300+','ОЗУ':'12 GB','Память':'256 GB','Батарея':'10090 mAh','ОС':'Android 14'}, description:'Samsung Galaxy Tab S10+ — мощный планшет для работы и развлечений с большим AMOLED экраном.' },
+  { id:'p9', name:'Чехол Spigen Ultra Hybrid iPhone 17', slug:'chekhol-spigen-iphone-17', brand:'spigen', category:'cases', label:'', rating:4.4, reviewsCount:67, images:['https://image.qwenlm.ai/public_source/3b29826f-5bca-49bd-b528-0bbb6460e7d6/1149c3413-d7cc-4e85-aee2-695436c2b9d6.png'], specs:{'Материал':'Поликарбонат + TPU','Совместимость':'iPhone 17 Pro','Защита':'Военный стандарт MIL-STD 810G','Особенности':'Прозрачный, MagSafe'}, description:'Надёжный прозрачный чехол с воздушными подушками для максимальной защиты.' },
+  { id:'p10', name:'Зарядное устройство Anker 65W', slug:'anker-65w-charger', brand:'anker', category:'chargers', label:'Выгодно', rating:4.6, reviewsCount:112, images:['https://image.qwenlm.ai/public_source/3b29826f-5bca-49bd-b528-0bbb6460e7d6/1149c3413-d7cc-4e85-aee2-695436c2b9d6.png'], specs:{'Мощность':'65W','Порты':'USB-C + USB-A','Технология':'GaN, PD 3.0','Размеры':'Компактный'}, description:'Компактное зарядное устройство GaN с поддержкой быстрой зарядки для всех устройств.' },
+  { id:'p11', name:'Xiaomi Redmi Note 14 Pro', slug:'xiaomi-redmi-note-14-pro', brand:'xiaomi', category:'smartphones', label:'Выгодно', rating:4.5, reviewsCount:187, images:['https://image.qwenlm.ai/public_source/3b29826f-5bca-49bd-b528-0bbb6460e7d6/1fdc06e62-55f8-4743-a7ed-5e85a6458559.png'], specs:{'Экран':'6.67" AMOLED, 120Hz','Процессор':'Dimensity 7300','ОЗУ':'8 GB','Камера':'108 MP + 8 MP + 2 MP','Батарея':'5500 mAh','ОС':'Android 14, HyperOS'}, description:'Xiaomi Redmi Note 14 Pro — доступный смартфон с AMOLED экраном 120Hz и быстрой зарядкой 67W.' },
+  { id:'p12', name:'Защитное стекло Nillkin iPhone 17', slug:'nillkin-glass-iphone-17', brand:'nillkin', category:'glass', label:'', rating:4.3, reviewsCount:89, images:['https://image.qwenlm.ai/public_source/3b29826f-5bca-49bd-b528-0bbb6460e7d6/1149c3413-d7cc-4e85-aee2-695436c2b9d6.png'], specs:{'Материал':'Закалённое стекло 9H','Совместимость':'iPhone 17 Pro','Покрытие':'Олеофобное','Толщина':'0.33 мм'}, description:'Качественное защитное стекло с олеофобным покрытием для защиты экрана iPhone 17 Pro.' },
+  { id:'p13', name:'Google Pixel 9 Pro', slug:'google-pixel-9-pro', brand:'google', category:'smartphones', label:'Новинка', rating:4.8, reviewsCount:42, images:['https://image.qwenlm.ai/public_source/3b29826f-5bca-49bd-b528-0bbb6460e7d6/1d5f464bb-87e5-4a1e-95b0-66c0a18f289b.png'], specs:{'Экран':'6.3" LTPO OLED, 120Hz','Процессор':'Google Tensor G4','ОЗУ':'16 GB','Камера':'50 MP + 48 MP + 48 MP','Батарея':'4700 mAh','ОС':'Android 15'}, description:'Google Pixel 9 Pro с лучшим ИИ на борту и превосходной камерой от Google.' },
+  { id:'p14', name:'OnePlus 12', slug:'oneplus-12', brand:'oneplus', category:'smartphones', label:'Хит', rating:4.7, reviewsCount:115, images:['https://image.qwenlm.ai/public_source/3b29826f-5bca-49bd-b528-0bbb6460e7d6/1fdc06e62-55f8-4743-a7ed-5e85a6458559.png'], specs:{'Экран':'6.82" LTPO AMOLED, 120Hz','Процессор':'Snapdragon 8 Gen 3','ОЗУ':'16 GB','Камера':'50 MP Hasselblad','Батарея':'5400 mAh','ОС':'Android 14'}, description:'Флагман от OnePlus с невероятно быстрым интерфейсом и камерой, настроенной Hasselblad.' },
+  { id:'p15', name:'Sony Xperia 1 VI', slug:'sony-xperia-1-vi', brand:'sony', category:'smartphones', label:'', rating:4.5, reviewsCount:38, images:['https://image.qwenlm.ai/public_source/3b29826f-5bca-49bd-b528-0bbb6460e7d6/14e2f8b9e-dab3-4263-8aa8-9af18ca6742e.png'], specs:{'Экран':'6.5" OLED, 120Hz','Процессор':'Snapdragon 8 Gen 3','ОЗУ':'12 GB','Камера':'48 MP Exmor T + 12 MP + 12 MP','Батарея':'5000 mAh','ОС':'Android 14'}, description:'Уникальный смартфон для создателей контента с оптическим зумом 85-170 мм.' }
+];
+
+const VARIANTS = [
+  { id:'v1', productId:'p1', attributes:{color:'Space Black', storage:'256GB'} },
+  { id:'v2', productId:'p1', attributes:{color:'Space Black', storage:'512GB'} },
+  { id:'v3', productId:'p1', attributes:{color:'Natural Titanium', storage:'256GB'} },
+  { id:'v4', productId:'p2', attributes:{color:'Titanium Gray', storage:'256GB'} },
+  { id:'v5', productId:'p2', attributes:{color:'Titanium Black', storage:'512GB'} },
+  { id:'v6', productId:'p3', attributes:{color:'Black', storage:'256GB'} },
+  { id:'v7', productId:'p4', attributes:{color:'Black', storage:'128GB'} },
+  { id:'v8', productId:'p5', attributes:{color:'Blue', storage:'128GB'} },
+  { id:'v9', productId:'p6', attributes:{color:'White', storage:'Standard'} },
+  { id:'v10', productId:'p7', attributes:{color:'Midnight', storage:'45mm'} },
+  { id:'v11', productId:'p8', attributes:{color:'Silver', storage:'256GB'} },
+  { id:'v12', productId:'p9', attributes:{color:'Clear', storage:'Standard'} },
+  { id:'v13', productId:'p10', attributes:{color:'White', storage:'Standard'} },
+  { id:'v14', productId:'p11', attributes:{color:'Blue', storage:'256GB'} },
+  { id:'v15', productId:'p12', attributes:{color:'Clear', storage:'Standard'} },
+  { id:'v16', productId:'p13', attributes:{color:'Obsidian', storage:'256GB'} },
+  { id:'v17', productId:'p14', attributes:{color:'Flowy Emerald', storage:'512GB'} },
+  { id:'v18', productId:'p15', attributes:{color:'Black', storage:'256GB'} },
+];
+
+const SELLERS = [
+  { id:'s1', name:'MVideo (ЦУМ)', logo:'🏪', rating:4.7, reviewsCount:2340, isVerified:true, phone:'+996 312 111 222', url:'https://example.com/mvideo', lat: 42.8755, lng: 74.6146 },
+  { id:'s2', name:'Sulpak (Дордой Плаза)', logo:'🏬', rating:4.5, reviewsCount:1890, isVerified:true, phone:'+996 312 333 444', url:'https://example.com/sulpak', lat: 42.8732, lng: 74.6169 },
+  { id:'s3', name:'TechnoHouse (VEFA)', logo:'🏢', rating:4.3, reviewsCount:980, isVerified:true, phone:'+996 312 555 666', url:'https://example.com/technohouse', lat: 42.8573, lng: 74.6000 },
+  { id:'s4', name:'iStore KG (Bishkek Park)', logo:'🍎', rating:4.8, reviewsCount:560, isVerified:true, phone:'+996 312 777 888', url:'https://example.com/istore', lat: 42.8752, lng: 74.5878 },
+  { id:'s5', name:'Мой телефон (Ошский рынок)', logo:'📱', rating:4.1, reviewsCount:340, isVerified:false, phone:'+996 550 111 222', url:'https://example.com/myphone', lat: 42.8785, lng: 74.5701 },
+  { id:'s6', name:'Galaxy Store (Азия Молл)', logo:'⭐', rating:4.4, reviewsCount:670, isVerified:true, phone:'+996 555 333 444', url:'https://example.com/galaxy', lat: 42.8554, lng: 74.5866 },
+];
+
+const OFFERS = [];
+let offerId = 1;
+function addOffer(productId, variantId, sellerId, condition, price, warranty, batteryHealth, usedImages) {
+  OFFERS.push({ id: String(offerId++), variantId, sellerId, condition, price, currency:'сом', availability:'IN_STOCK', warrantyInfo:warranty, batteryHealth: batteryHealth || null, usedImages: usedImages || null, targetUrl:SELLERS.find(s=>s.id===sellerId).url, updatedAt:new Date().toISOString() });
+}
+
+addOffer('p1','v1','s1','NEW',115000,'Официальная 1 год');
+addOffer('p1','v1','s4','NEW',118000,'Официальная 1 год');
+addOffer('p1','v1','s2','NEW',112000,'От магазина 6 мес');
+addOffer('p1','v1','s3','NEW',110000,'От магазина 3 мес');
+addOffer('p1','v1','s5','USED_EXCELLENT',85000,'3 мес',92,['https://image.qwenlm.ai/public_source/3b29826f-5bca-49bd-b528-0bbb6460e7d6/14e2f8b9e-dab3-4263-8aa8-9af18ca6742e.png']);
+addOffer('p1','v1','s5','USED_GOOD',78000,'1 мес',85,['https://image.qwenlm.ai/public_source/3b29826f-5bca-49bd-b528-0bbb6460e7d6/14e2f8b9e-dab3-4263-8aa8-9af18ca6742e.png']);
+addOffer('p1','v2','s1','NEW',128000,'Официальная 1 год');
+addOffer('p1','v2','s4','NEW',130000,'Официальная 1 год');
+addOffer('p1','v3','s1','NEW',115000,'Официальная 1 год');
+addOffer('p2','v4','s1','NEW',105000,'Официальная 1 год');
+addOffer('p2','v4','s6','NEW',102000,'От магазина 6 мес');
+addOffer('p2','v4','s2','NEW',108000,'Официальная 1 год');
+addOffer('p2','v4','s5','USED_EXCELLENT',75000,'3 мес',88);
+addOffer('p2','v5','s1','NEW',120000,'Официальная 1 год');
+addOffer('p3','v6','s1','NEW',55000,'Официальная 1 год');
+addOffer('p3','v6','s3','NEW',52000,'От магазина 6 мес');
+addOffer('p3','v6','s2','NEW',54000,'Официальная 1 год');
+addOffer('p3','v6','s5','USED_GOOD',38000,'1 мес',82);
+addOffer('p4','v7','s1','NEW',75000,'Официальная 1 год');
+addOffer('p4','v7','s4','NEW',78000,'Официальная 1 год');
+addOffer('p4','v7','s3','NEW',72000,'От магазина 3 мес');
+addOffer('p4','v7','s5','USED_EXCELLENT',55000,'3 мес',90);
+addOffer('p4','v7','s5','USED_GOOD',48000,'1 мес',80);
+addOffer('p5','v8','s1','NEW',42000,'Официальная 1 год');
+addOffer('p5','v8','s6','NEW',40000,'От магазина 6 мес');
+addOffer('p5','v8','s2','NEW',44000,'Официальная 1 год');
+addOffer('p6','v9','s1','NEW',25000,'Официальная 1 год');
+addOffer('p6','v9','s4','NEW',27000,'Официальная 1 год');
+addOffer('p6','v9','s2','NEW',24000,'От магазина 6 мес');
+addOffer('p7','v10','s1','NEW',45000,'Официальная 1 год');
+addOffer('p7','v10','s4','NEW',48000,'Официальная 1 год');
+addOffer('p7','v10','s2','NEW',43000,'От магазина 6 мес');
+addOffer('p8','v11','s1','NEW',65000,'Официальная 1 год');
+addOffer('p8','v11','s6','NEW',62000,'От магазина 6 мес');
+addOffer('p9','v12','s1','NEW',2500,'От магазина 6 мес');
+addOffer('p9','v12','s2','NEW',2200,'От магазина 3 мес');
+addOffer('p9','v12','s3','NEW',2800,'От магазина 3 мес');
+addOffer('p10','v13','s1','NEW',3500,'От магазина 6 мес');
+addOffer('p10','v13','s2','NEW',3200,'От магазина 3 мес');
+addOffer('p10','v13','s3','NEW',3800,'От магазина 3 мес');
+addOffer('p11','v14','s1','NEW',22000,'Официальная 1 год');
+addOffer('p11','v14','s3','NEW',20000,'От магазина 6 мес');
+addOffer('p11','v14','s5','USED_GOOD',15000,'1 мес',87);
+addOffer('p12','v15','s1','NEW',800,'От магазина 3 мес');
+addOffer('p12','v15','s2','NEW',600,'От магазина 3 мес');
+addOffer('p12','v15','s3','NEW',900,'От магазина 3 мес');
+addOffer('p13','v16','s6','NEW',95000,'Официальная 1 год');
+addOffer('p13','v16','s2','NEW',98000,'От магазина 6 мес');
+addOffer('p14','v17','s3','NEW',82000,'От магазина 6 мес');
+addOffer('p14','v17','s1','NEW',85000,'Официальная 1 год');
+addOffer('p15','v18','s3','NEW',110000,'Официальная 1 год');
+
+const REVIEWS = [
+  { productId:'p1', author:'Айбек М.', date:'2024-12-15', rating:5, pros:'Отличная камера, быстрая зарядка, красивый дизайн', cons:'Цена высоковата', comment:'Лучший iPhone, который у меня был. Камера просто невероятная!' },
+  { productId:'p1', author:'Нургуль К.', date:'2024-12-10', rating:4, pros:'Производительность, экран', cons:'Батарея могла бы быть больше', comment:'Очень доволен покупкой, телефон работает быстро.' },
+  { productId:'p1', author:'Данияр Т.', date:'2024-12-05', rating:5, pros:'Всё!', cons:'Нет', comment:'Перешёл с Android, не жалею ни секунды.' },
+  { productId:'p2', author:'Бакыт Ж.', date:'2024-12-12', rating:5, pros:'Камера 200МП, S Pen, большой экран', cons:'Тяжеловат', comment:'Лучший Android смартфон на рынке.' },
+  { productId:'p2', author:'Айсулуу А.', date:'2024-12-08', rating:4, pros:'Экран, камера, S Pen', cons:'Долго заряжается', comment:'Отличный телефон для работы и развлечений.' },
+  { productId:'p3', author:'Эрлан С.', date:'2024-12-14', rating:5, pros:'Цена/качество, камера Leica', cons:'Нет', comment:'За эти деньги — лучший смартфон.' },
+  { productId:'p3', author:'Мээрим Б.', date:'2024-12-09', rating:4, pros:'Быстрая зарядка, дизайн', cons:'Нет NFC в некоторых версиях', comment:'Очень доволен, рекомендую!' },
+  { productId:'p6', author:'Чынгыз Н.', date:'2024-12-13', rating:5, pros:'Шумоподавление, звук', cons:'Цена', comment:'Лучшие наушники, которые я использовал.' },
+  { productId:'p7', author:'Алина Д.', date:'2024-12-11', rating:5, pros:'Дизайн, функции здоровья', cons:'Батарея на 1 день', comment:'Обожаю свои часы! Очень удобные.' },
+  { productId:'p4', author:'Тимур К.', date:'2024-12-07', rating:4, pros:'Камера, производительность', cons:'60Hz экран', comment:'Хороший базовый iPhone.' },
+];
+
+const CATEGORIES = [
+  { id:'smartphones', name:'Смартфоны', icon:'📱', image:'https://image.qwenlm.ai/public_source/3b29826f-5bca-49bd-b528-0bbb6460e7d6/14e2f8b9e-dab3-4263-8aa8-9af18ca6742e.png' },
+  { id:'headphones', name:'Наушники', icon:'🎧', image:'https://image.qwenlm.ai/public_source/3b29826f-5bca-49bd-b528-0bbb6460e7d6/13c99d60f-7673-4ac4-b7f7-2d5496885e22.png' },
+  { id:'watches', name:'Смарт-часы', icon:'⌚', image:'https://image.qwenlm.ai/public_source/3b29826f-5bca-49bd-b528-0bbb6460e7d6/151fb91eb-9ea7-48e1-be9c-f2b943ced773.png' },
+  { id:'cases', name:'Чехлы', icon:'🛡️', image:'https://image.qwenlm.ai/public_source/3b29826f-5bca-49bd-b528-0bbb6460e7d6/1149c3413-d7cc-4e85-aee2-695436c2b9d6.png' },
+  { id:'chargers', name:'Зарядные устройства', icon:'🔌', image:'https://image.qwenlm.ai/public_source/3b29826f-5bca-49bd-b528-0bbb6460e7d6/1149c3413-d7cc-4e85-aee2-695436c2b9d6.png' },
+  { id:'tablets', name:'Планшеты', icon:'📟', image:'https://image.qwenlm.ai/public_source/3b29826f-5bca-49bd-b528-0bbb6460e7d6/1ba6ad3ba-b937-492c-ba69-145b9e008b2b.png' },
+  { id:'glass', name:'Защитные стёкла', icon:'🔲', image:'https://image.qwenlm.ai/public_source/3b29826f-5bca-49bd-b528-0bbb6460e7d6/1149c3413-d7cc-4e85-aee2-695436c2b9d6.png' },
+];
+
+const BRANDS = [
+  { id:'apple', name:'Apple', icon:'🍎' },
+  { id:'samsung', name:'Samsung', icon:'' },
+  { id:'xiaomi', name:'Xiaomi', icon:'' },
+  { id:'google', name:'Google', icon:'' },
+  { id:'oneplus', name:'OnePlus', icon:'' },
+  { id:'sony', name:'Sony', icon:'' },
+  { id:'spigen', name:'Spigen', icon:'🛡️' },
+  { id:'anker', name:'Anker', icon:'⚡' },
+  { id:'nillkin', name:'Nillkin', icon:'🔲' },
+];
+
+// ===== STATE =====
+const State = {
+  favorites: JSON.parse(localStorage.getItem('tm_favorites') || '[]'),
+  user: JSON.parse(localStorage.getItem('tm_user') || 'null'),
+  filters: { category:'', brand:'', seller:'', priceMin:0, priceMax:999999, condition:'all', storage:'all', color:'all', search:'' },
+  sort: 'popular',
+  catalogView: 'products', // 'products' | 'sellers'
+  catalogPage: 1,
+  catalogLoaded: false,
+  heroSlide: 0,
+  searchTimeout: null,
+};
+
+function saveState() {
+  localStorage.setItem('tm_favorites', JSON.stringify(State.favorites));
+  localStorage.setItem('tm_user', JSON.stringify(State.user));
+}
+
+function toggleFavorite(productId) {
+  const idx = State.favorites.indexOf(productId);
+  if (idx === -1) {
+    State.favorites.push(productId);
+    showToast('Товар добавлен в избранное', 'success');
+  } else {
+    State.favorites.splice(idx, 1);
+    showToast('Товар удалён из избранного', 'info');
+  }
+  saveState();
+  updateFavBadge();
+  renderCurrentPage();
+}
+
+function isFavorite(productId) {
+  return State.favorites.includes(productId);
+}
+
+function updateFavBadge() {
+  const badge = document.getElementById('favBadge');
+  if (State.favorites.length > 0) {
+    badge.textContent = State.favorites.length;
+    badge.classList.remove('hidden');
+    badge.classList.add('flex');
+  } else {
+    badge.classList.add('hidden');
+    badge.classList.remove('flex');
+  }
+}
+
+// ===== TOAST =====
+function showToast(message, type='info') {
+  const container = document.getElementById('toastContainer');
+  const toast = document.createElement('div');
+  const colors = { success:'bg-green-500', info:'bg-primary-600', warning:'bg-amber-500', error:'bg-red-500' };
+  const icons = {
+    success:'<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>',
+    info:'<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>',
+    warning:'<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg>',
+    error:'<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>'
+  };
+  toast.className = `animate-toastIn flex items-center gap-3 ${colors[type]} text-white px-4 py-3 rounded-xl shadow-lg max-w-sm`;
+  toast.innerHTML = `${icons[type]}<span class="text-sm font-medium">${message}</span>`;
+  container.appendChild(toast);
+  setTimeout(() => {
+    toast.classList.remove('animate-toastIn');
+    toast.classList.add('animate-toastOut');
+    setTimeout(() => toast.remove(), 300);
+  }, 3000);
+}
+
+// ===== ROUTER =====
+function navigate(path) {
+  window.location.hash = path;
+}
+
+function getCurrentRoute() {
+  const hash = window.location.hash.slice(1) || '/';
+  return hash;
+}
+
+function getRouteParams() {
+  const hash = window.location.hash.slice(1) || '/';
+  const parts = hash.split('?');
+  const path = parts[0];
+  const params = {};
+  if (parts[1]) {
+    parts[1].split('&').forEach(p => {
+      const [k,v] = p.split('=');
+      if (k) params[k] = decodeURIComponent(v||'');
+    });
+  }
+  return { path, params };
+}
+
+window.addEventListener('hashchange', () => {
+  renderPage();
+});
+
+// ===== RENDER PAGE =====
+function renderPage() {
+  // Очистка карт при смене страницы, чтобы избежать ошибки инициализации Leaflet
+  if (window._homeMap) {
+    window._homeMap.remove();
+    window._homeMap = null;
+  }
+  if (window._currentProductMap) {
+    window._currentProductMap.remove();
+    window._currentProductMap = null;
+  }
+  window._currentMapMarkersDict = {};
+
+  const { path, params } = getRouteParams();
+  const app = document.getElementById('app');
+  window.scrollTo({ top: 0, behavior: 'instant' });
+
+  if (path === '/' || path === '') {
+    renderHomePage(app);
+  } else if (path === '/catalog') {
+    renderCatalogPage(app, params);
+  } else if (path === '/favorites') {
+    renderFavoritesPage(app);
+  } else if (path.startsWith('/product/')) {
+    const slug = path.replace('/product/', '');
+    renderProductPage(app, slug, params);
+  } else {
+    renderHomePage(app);
+  }
+}
+
+function renderCurrentPage() {
+  const { path, params } = getRouteParams();
+  const app = document.getElementById('app');
+  
+  if (path === '/catalog') {
+    renderCatalogPage(app, params);
+  } else if (path.startsWith('/product/')) {
+    const slug = path.replace('/product/', '');
+    renderProductPage(app, slug, params);
+  }
+  // Для других страниц можно вызывать полный renderPage
+}
+
+// ===== HOME MAP LOGIC =====
+function initHomeMap() {
+  const mapContainer = document.getElementById('homeGlobalMap');
+  if (!mapContainer) return;
+
+  if (!window._homeMap) {
+    window._homeMap = L.map('homeGlobalMap').setView([42.8746, 74.5698], 12);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(window._homeMap);
+  }
+
+  // Фикс для отображения скрытой карты
+  setTimeout(() => {
+    if (window._homeMap) window._homeMap.invalidateSize();
+  }, 100);
+
+  updateHomeMapMarkers('');
+}
+
+function handleHomeMapSearch() {
+  const q = document.getElementById('homeMapSearch').value;
+  updateHomeMapMarkers(q);
+}
+
+function updateHomeMapMarkers(query) {
+  if (!window._homeMap) return;
+
+  if (window._homeMapMarkers) {
+    window._homeMapMarkers.forEach(m => window._homeMap.removeLayer(m));
+  }
+  window._homeMapMarkers = [];
+
+  const bounds = L.latLngBounds();
+  const q = query.toLowerCase();
+  let hasValidMarkers = false;
+
+  SELLERS.forEach(seller => {
+    // Поиск по имени продавца
+    let match = seller.name.toLowerCase().includes(q);
+
+    // Поиск по товарам, которые есть у продавца
+    if (!match && q.length > 1) {
+      const sellerOffers = OFFERS.filter(o => o.sellerId === seller.id);
+      match = sellerOffers.some(o => {
+        const variant = VARIANTS.find(v => v.id === o.variantId);
+        if(!variant) return false;
+        const prod = PRODUCTS.find(p => p.id === variant.productId);
+        return prod && prod.name.toLowerCase().includes(q);
+      });
+    }
+
+    if (match && seller.lat && seller.lng) {
+      const marker = L.marker([seller.lat, seller.lng]).addTo(window._homeMap);
+      
+      const popupContent = `
+        <div class="p-1 min-w-[150px]">
+          <div class="font-bold text-sm mb-1">${seller.logo} ${seller.name}</div>
+          <div class="text-xs text-surface-500 mb-2">Рейтинг: ${seller.rating} ★</div>
+          <button onclick="navigate('/catalog?seller=${seller.id}'); window._homeMap.closePopup();" class="block w-full text-center bg-primary-600 text-white text-xs py-1.5 rounded-lg hover:bg-primary-700 transition-colors">Показать товары</button>
+        </div>
+      `;
+      
+      marker.bindPopup(popupContent);
+      window._homeMapMarkers.push(marker);
+      bounds.extend([seller.lat, seller.lng]);
+      hasValidMarkers = true;
+    }
+  });
+
+  if (hasValidMarkers) {
+    window._homeMap.fitBounds(bounds, { padding: [50, 50], maxZoom: 15 });
+  } else if (!query) {
+    window._homeMap.setView([42.8746, 74.5698], 12);
+  }
+}
+
+// ===== PRODUCT OFFERS MAP LOGIC =====
+function initOffersMap(offers) {
+  const mapContainer = document.getElementById('offersMap');
+  if (!mapContainer) return;
+
+  if (!window._currentProductMap) {
+    window._currentProductMap = L.map('offersMap').setView([42.8746, 74.5698], 13);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(window._currentProductMap);
+  }
+
+  setTimeout(() => {
+    if (window._currentProductMap) window._currentProductMap.invalidateSize();
+  }, 100);
+
+  updateMapMarkers(offers);
+}
+
+function updateMapMarkers(offers) {
+  if (!window._currentProductMap) return;
+
+  if (window._currentMapMarkers) {
+    window._currentMapMarkers.forEach(m => window._currentProductMap.removeLayer(m));
+  }
+  window._currentMapMarkers = [];
+  window._currentMapMarkersDict = {};
+
+  const bounds = L.latLngBounds();
+  let hasValidMarkers = false;
+
+  offers.forEach(offer => {
+    const seller = SELLERS.find(s => s.id === offer.sellerId);
+    if (seller && seller.lat && seller.lng) {
+      // Исключаем дубликаты маркеров одного продавца
+      if (!window._currentMapMarkersDict[seller.id]) {
+        const marker = L.marker([seller.lat, seller.lng]).addTo(window._currentProductMap);
+        
+        const popupContent = `
+          <div class="p-1 min-w-[140px]">
+            <div class="font-bold text-sm mb-1">${seller.name}</div>
+            <div class="text-xs text-surface-500 mb-2">Рейтинг: ${seller.rating} ★</div>
+            <div class="text-base font-bold text-primary-600 mb-2">${offer.price.toLocaleString()} сом</div>
+            <a href="${seller.url}" target="_blank" class="block w-full text-center bg-primary-600 text-white text-xs py-1.5 rounded-lg hover:bg-primary-700 transition-colors">Перейти в магазин</a>
+          </div>
+        `;
+        
+        marker.bindPopup(popupContent);
+        window._currentMapMarkers.push(marker);
+        window._currentMapMarkersDict[seller.id] = marker;
+        bounds.extend([seller.lat, seller.lng]);
+        hasValidMarkers = true;
+      }
+    }
+  });
+
+  if (hasValidMarkers) {
+    window._currentProductMap.fitBounds(bounds, { padding: [50, 50], maxZoom: 15 });
+  } else {
+    window._currentProductMap.setView([42.8746, 74.5698], 13);
+  }
+}
+
+function focusMapMarker(sellerId) {
+  if (window._currentMapMarkersDict && window._currentMapMarkersDict[sellerId] && window._currentProductMap) {
+    const marker = window._currentMapMarkersDict[sellerId];
+    marker.openPopup();
+    // Плавное панорамирование
+    window._currentProductMap.panTo(marker.getLatLng(), {animate: true, duration: 0.5});
+  }
+}
+
+// ===== HERO SLIDER =====
+let heroInterval;
+function initSlider() {
+  clearInterval(heroInterval);
+  State.heroSlide = 0;
+  heroInterval = setInterval(nextSlide, 5000);
+}
+
+function goToSlide(idx) {
+  State.heroSlide = idx;
+  updateSlider();
+  clearInterval(heroInterval);
+  heroInterval = setInterval(nextSlide, 5000);
+}
+
+function nextSlide() {
+  const slides = document.querySelectorAll('.hero-slide');
+  if (!slides.length) return;
+  State.heroSlide = (State.heroSlide + 1) % slides.length;
+  updateSlider();
+}
+
+function prevSlide() {
+  const slides = document.querySelectorAll('.hero-slide');
+  if (!slides.length) return;
+  State.heroSlide = (State.heroSlide - 1 + slides.length) % slides.length;
+  updateSlider();
+}
+
+function updateSlider() {
+  const slides = document.querySelectorAll('.hero-slide');
+  const dots = document.querySelectorAll('[data-dot]');
+  slides.forEach((slide, i) => {
+    slide.style.transform = i === State.heroSlide ? 'translateX(0)' : 'translateX(100%)';
+  });
+  dots.forEach((dot, i) => {
+    dot.className = `w-2.5 h-2.5 rounded-full transition-all ${i === State.heroSlide ? 'bg-white w-8' : 'bg-white/40 hover:bg-white/70'}`;
+  });
+}
+
+// ===== HOME PAGE =====
+function renderHomePage(app) {
+  const heroImages = [
+    'https://image.qwenlm.ai/public_source/3b29826f-5bca-49bd-b528-0bbb6460e7d6/147961520-e687-47d3-acca-0f35d1536a31.png',
+    'https://image.qwenlm.ai/public_source/3b29826f-5bca-49bd-b528-0bbb6460e7d6/1d5f464bb-87e5-4a1e-95b0-66c0a18f289b.png',
+    'https://image.qwenlm.ai/public_source/3b29826f-5bca-49bd-b528-0bbb6460e7d6/1fdc06e62-55f8-4743-a7ed-5e85a6458559.png',
+  ];
+  const heroTexts = [
+    { title:'iPhone 17 Pro', subtitle:'Революция в фотографии', cta:'Подробнее', link:'#/product/apple-iphone-17-pro' },
+    { title:'Galaxy S25 Ultra', subtitle:'Мощь в каждой детали', cta:'Подробнее', link:'#/product/samsung-galaxy-s25-ultra' },
+    { title:'Xiaomi 15 Pro', subtitle:'Флагман по доступной цене', cta:'Подробнее', link:'#/product/xiaomi-15-pro' },
+  ];
+
+  const trendingProducts = PRODUCTS.filter(p => p.rating >= 4.7).slice(0, 6);
+  const dealsProducts = PRODUCTS.filter(p => p.label === 'Выгодно');
+
+  app.innerHTML = `
+    <!-- Hero Slider -->
+    <section class="relative overflow-hidden bg-surface-900">
+      <div class="relative h-[300px] sm:h-[400px] md:h-[500px]">
+        ${heroImages.map((img, i) => `
+          <div class="hero-slide absolute inset-0 ${i === 0 ? '' : 'translate-x-full'}" data-slide="${i}">
+            <div class="absolute inset-0 bg-gradient-to-r from-surface-900/90 via-surface-900/60 to-transparent z-10"></div>
+            <img src="${img}" alt="${heroTexts[i].title}" class="w-full h-full object-cover" loading="${i===0?'eager':'lazy'}">
+            <div class="absolute inset-0 z-20 flex items-center max-w-7xl mx-auto px-4 md:px-8">
+              <div class="animate-slideUp max-w-lg">
+                <span class="inline-block bg-accent-500/20 text-accent-400 text-xs font-bold px-3 py-1 rounded-full mb-4 uppercase tracking-wider">Новинка 2026</span>
+                <h1 class="text-3xl sm:text-4xl md:text-6xl font-bold text-white mb-3">${heroTexts[i].title}</h1>
+                <p class="text-surface-300 text-base sm:text-lg md:text-xl mb-6">${heroTexts[i].subtitle}</p>
+                <a href="${heroTexts[i].link}" class="inline-flex items-center gap-2 bg-primary-600 text-white px-6 py-3 rounded-xl font-semibold hover:bg-primary-700 transition-colors">
+                  ${heroTexts[i].cta}
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                </a>
+              </div>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+      <div class="absolute bottom-6 left-1/2 -translate-x-1/2 z-30 flex items-center gap-3">
+        ${heroImages.map((_, i) => `<button onclick="goToSlide(${i})" class="w-2.5 h-2.5 rounded-full transition-all ${i === 0 ? 'bg-white w-8' : 'bg-white/40 hover:bg-white/70'}" data-dot="${i}"></button>`).join('')}
+      </div>
+      <button onclick="prevSlide()" class="absolute left-3 md:left-6 top-1/2 -translate-y-1/2 z-30 w-10 h-10 bg-white/10 backdrop-blur rounded-full flex items-center justify-center hover:bg-white/20 transition-colors">
+        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+      </button>
+      <button onclick="nextSlide()" class="absolute right-3 md:right-6 top-1/2 -translate-y-1/2 z-30 w-10 h-10 bg-white/10 backdrop-blur rounded-full flex items-center justify-center hover:bg-white/20 transition-colors">
+        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+      </button>
+    </section>
+
+    <!-- Global Map Section -->
+    <section class="max-w-7xl mx-auto px-4 py-8 mt-4">
+      <div class="flex flex-col md:flex-row md:items-center justify-between mb-4 gap-4">
+        <h2 class="text-2xl font-bold text-surface-800">📍 Продавцы на карте</h2>
+        <div class="relative w-full md:w-80">
+          <input type="text" id="homeMapSearch" placeholder="Поиск телефона или магазина..." oninput="handleHomeMapSearch()" class="w-full bg-white border border-surface-200 rounded-xl py-2 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all shadow-sm">
+          <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-surface-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+        </div>
+      </div>
+      <div id="homeGlobalMap" class="w-full h-72 md:h-[400px] bg-surface-200 rounded-2xl overflow-hidden border border-surface-200 shadow-sm z-10 relative"></div>
+    </section>
+
+    <!-- Categories -->
+    <section class="max-w-7xl mx-auto px-4 py-6 md:py-8">
+      <h2 class="text-2xl font-bold text-surface-800 mb-6">Популярные категории</h2>
+      <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-3 md:gap-4">
+        ${CATEGORIES.map(cat => `
+          <a href="#/catalog?category=${cat.id}" class="group bg-white rounded-2xl p-4 shadow-sm hover:shadow-lg transition-all hover:-translate-y-1 border border-surface-100">
+            <div class="text-3xl mb-2 text-center">${cat.icon}</div>
+            <p class="text-sm font-medium text-surface-700 text-center group-hover:text-primary-600 transition-colors">${cat.name}</p>
+          </a>
+        `).join('')}
+      </div>
+    </section>
+
+    <!-- Trending Products -->
+    <section class="max-w-7xl mx-auto px-4 py-6 md:py-10">
+      <div class="flex items-center justify-between mb-6">
+        <h2 class="text-2xl font-bold text-surface-800">🔥 Популярные товары</h2>
+        <a href="#/catalog" class="text-primary-600 text-sm font-medium hover:text-primary-700 flex items-center gap-1">
+          Все товары <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+        </a>
+      </div>
+      <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 md:gap-4">
+        ${trendingProducts.map(p => renderProductCard(p)).join('')}
+      </div>
+    </section>
+
+    <!-- Deals -->
+    ${dealsProducts.length > 0 ? `
+    <section class="max-w-7xl mx-auto px-4 py-6 md:py-10">
+      <div class="flex items-center justify-between mb-6">
+        <h2 class="text-2xl font-bold text-surface-800">💰 Выгодно</h2>
+        <a href="#/catalog?label=deals" class="text-primary-600 text-sm font-medium hover:text-primary-700 flex items-center gap-1">
+          Все акции <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+        </a>
+      </div>
+      <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 md:gap-4">
+        ${dealsProducts.map(p => renderProductCard(p)).join('')}
+      </div>
+    </section>
+    ` : ''}
+
+    <!-- SEO Block -->
+    <section class="max-w-7xl mx-auto px-4 py-6 md:py-10">
+      <div class="bg-gradient-to-br from-primary-50 to-accent-50 rounded-2xl p-6 md:p-10 border border-primary-100">
+        <h2 class="text-xl md:text-2xl font-bold text-surface-800 mb-4">TeleMarket — агрегатор цен на телефоны в Кыргызстане</h2>
+        <p class="text-surface-600 text-sm md:text-base leading-relaxed mb-4">Сравнивайте цены на мобильные телефоны, планшеты и аксессуары от проверенных продавцов Бишкека. Мы собираем предложения как для новых, так и для б/у устройств, помогая вам найти лучшую цену.</p>
+        <div class="flex flex-wrap gap-2">
+          ${CATEGORIES.map(cat => `<a href="#/catalog?category=${cat.id}" class="bg-white/80 px-3 py-1.5 rounded-lg text-sm text-surface-600 hover:text-primary-600 hover:bg-white transition-colors border border-primary-100">${cat.icon} ${cat.name}</a>`).join('')}
+        </div>
+      </div>
+    </section>
+  `;
+
+  initSlider();
+  setTimeout(() => initHomeMap(), 100);
+}
+
+function renderProductCard(product) {
+  const offers = OFFERS.filter(o => {
+    const variant = VARIANTS.find(v => v.id === o.variantId);
+    return variant && variant.productId === product.id;
+  });
+  const prices = offers.filter(o => o.condition === 'NEW').map(o => o.price);
+  const minPrice = prices.length > 0 ? Math.min(...prices) : 0;
+  const usedPrices = offers.filter(o => o.condition !== 'NEW').map(o => o.price);
+  const minUsedPrice = usedPrices.length > 0 ? Math.min(...usedPrices) : 0;
+
+  const stars = renderStars(product.rating);
+
+  return `
+    <div class="product-card bg-white rounded-2xl shadow-sm hover:shadow-lg transition-all border border-surface-100 overflow-hidden group animate-fadeIn" itemscope itemtype="https://schema.org/Product">
+      <div class="relative aspect-square bg-surface-50 overflow-hidden">
+        <img src="${product.images[0]}" alt="${product.name}" class="product-img w-full h-full object-contain p-4" loading="lazy" itemprop="image">
+        ${product.label ? `<span class="absolute top-2 left-2 ${product.label==='Новинка'?'bg-accent-500':product.label==='Хит'?'bg-orange-500':'bg-green-500'} text-white text-xs font-bold px-2 py-1 rounded-lg">${product.label}</span>` : ''}
+        <button onclick="event.stopPropagation();toggleFavorite('${product.id}')" class="absolute top-2 right-2 w-8 h-8 bg-white/80 backdrop-blur rounded-full flex items-center justify-center hover:bg-white transition-colors shadow-sm">
+          <svg class="w-4 h-4 ${isFavorite(product.id)?'text-red-500 fill-current':'text-surface-400'}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
+        </button>
+      </div>
+      <a href="#/product/${product.slug}" class="block p-3 md:p-4" onclick="trackEvent('product_view',{productId:'${product.id}'})">
+        <h3 class="text-sm font-medium text-surface-800 line-clamp-2 mb-1 group-hover:text-primary-600 transition-colors" itemprop="name">${product.name}</h3>
+        <div class="flex items-center gap-1 mb-2">${stars}<span class="text-xs text-surface-400">(${product.reviewsCount})</span></div>
+        <div class="flex items-end gap-2">
+          ${minPrice > 0 ? `<span class="text-base md:text-lg font-bold text-surface-800">от ${minPrice.toLocaleString()} сом</span>` : ''}
+          ${minUsedPrice > 0 ? `<span class="text-xs text-surface-500">б/у от ${minUsedPrice.toLocaleString()}</span>` : ''}
+        </div>
+        <div class="text-xs text-surface-400 mt-1">Предложений: ${offers.length}</div>
+      </a>
+    </div>
+  `;
+}
+
+function renderStars(rating, size='w-3.5 h-3.5') {
+  let stars = '';
+  for (let i = 1; i <= 5; i++) {
+    if (i <= Math.floor(rating)) {
+      stars += `<svg class="${size} star-rating" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>`;
+    } else if (i - 0.5 <= rating) {
+      stars += `<svg class="${size} text-amber-300" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>`;
+    } else {
+      stars += `<svg class="${size} text-surface-300" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>`;
+    }
+  }
+  return stars;
+}
+
+// ===== CATALOG PAGE =====
+function renderCatalogPage(app, params) {
+  if (params.category) State.filters.category = params.category;
+  if (params.brand) State.filters.brand = params.brand;
+  if (params.seller) State.filters.seller = params.seller;
+  if (params.search) State.filters.search = params.search;
+
+  const filteredProducts = getFilteredProducts();
+  const sortedProducts = sortProducts(filteredProducts);
+  const activeFilters = Object.entries(State.filters).filter(([k,v]) => v && v !== 'all' && v !== '' && v !== 0 && v !== 999999);
+
+  // Sellers view data
+  const sellersList = SELLERS.sort((a,b) => b.rating - a.rating);
+
+  app.innerHTML = `
+    <!-- Breadcrumbs -->
+    <div class="max-w-7xl mx-auto px-4 py-3">
+      <nav class="flex items-center gap-2 text-sm text-surface-500">
+        <a href="#/" class="hover:text-primary-600">Главная</a>
+        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+        <a href="#/catalog" class="hover:text-primary-600">Каталог</a>
+        ${params.category ? `
+          <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+          <span class="text-surface-800">${CATEGORIES.find(c=>c.id===params.category)?.name || params.category}</span>
+        ` : ''}
+      </nav>
+    </div>
+
+    <div class="max-w-7xl mx-auto px-4 pb-8">
+      
+      <!-- Catalog Tabs: Products / Sellers -->
+      <div class="flex items-center gap-2 mb-6 bg-surface-100 p-1.5 rounded-xl w-max">
+        <button onclick="setCatalogView('products')" class="px-5 py-2 text-sm font-semibold rounded-lg transition-all ${State.catalogView === 'products' ? 'bg-white shadow-sm text-primary-700' : 'text-surface-600 hover:text-surface-800'}">Товары</button>
+        <button onclick="setCatalogView('sellers')" class="px-5 py-2 text-sm font-semibold rounded-lg transition-all ${State.catalogView === 'sellers' ? 'bg-white shadow-sm text-primary-700' : 'text-surface-600 hover:text-surface-800'}">Продавцы</button>
+      </div>
+
+      <div class="flex flex-col md:flex-row gap-6">
+        
+        <!-- Desktop Sidebar (Only shows if view is 'products') -->
+        ${State.catalogView === 'products' ? `
+        <aside class="hidden md:block w-64 flex-shrink-0">
+          <div class="sticky top-20 bg-white rounded-2xl shadow-sm border border-surface-100 p-5">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="font-bold text-surface-800">Фильтры</h3>
+              ${activeFilters.length > 0 ? `<button onclick="resetAllFilters()" class="text-xs text-primary-600 hover:text-primary-700">Сбросить</button>` : ''}
+            </div>
+
+            <!-- Active filters -->
+            ${activeFilters.length > 0 ? `
+              <div class="flex flex-wrap gap-1.5 mb-4">
+                ${activeFilters.map(([k,v]) => `
+                  <span class="inline-flex items-center gap-1 bg-primary-50 text-primary-700 text-xs px-2 py-1 rounded-lg">
+                    ${k==='brand'?BRANDS.find(b=>b.id===v)?.name||v:k==='category'?CATEGORIES.find(c=>c.id===v)?.name||v:k==='seller'?SELLERS.find(s=>s.id===v)?.name||v:v}
+                    <button onclick="removeFilter('${k}')" class="hover:text-primary-900">×</button>
+                  </span>
+                `).join('')}
+              </div>
+            ` : ''}
+
+            <!-- Category filter -->
+            <div class="mb-5">
+              <h4 class="text-sm font-semibold text-surface-700 mb-2">Категория</h4>
+              ${CATEGORIES.map(cat => `
+                <label class="flex items-center gap-2 py-1 cursor-pointer text-sm text-surface-600 hover:text-surface-800">
+                  <input type="checkbox" ${State.filters.category===cat.id?'checked':''} onchange="updateFilter('category','${cat.id}',this.checked)" class="rounded border-surface-300 text-primary-600 focus:ring-primary-500">
+                  ${cat.icon} ${cat.name}
+                </label>
+              `).join('')}
+            </div>
+
+            <!-- Brand filter -->
+            <div class="mb-5">
+              <h4 class="text-sm font-semibold text-surface-700 mb-2">Бренд</h4>
+              ${BRANDS.map(brand => `
+                <label class="flex items-center gap-2 py-1 cursor-pointer text-sm text-surface-600 hover:text-surface-800">
+                  <input type="checkbox" ${State.filters.brand===brand.id?'checked':''} onchange="updateFilter('brand','${brand.id}',this.checked)" class="rounded border-surface-300 text-primary-600 focus:ring-primary-500">
+                  ${brand.icon} ${brand.name}
+                </label>
+              `).join('')}
+            </div>
+
+            <!-- Price range -->
+            <div class="mb-5">
+              <h4 class="text-sm font-semibold text-surface-700 mb-3">Цена, сом</h4>
+              <div class="flex gap-2 mb-3">
+                <input type="number" placeholder="От" value="${State.filters.priceMin||''}" onchange="updateFilter('priceMin',this.value)" class="w-full px-3 py-2 border border-surface-200 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+                <input type="number" placeholder="До" value="${State.filters.priceMax<999999?State.filters.priceMax:''}" onchange="updateFilter('priceMax',this.value)" class="w-full px-3 py-2 border border-surface-200 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+              </div>
+              <input type="range" min="0" max="200000" value="${State.filters.priceMax<999999?State.filters.priceMax:200000}" class="range-slider w-full" oninput="updateFilter('priceMax',this.value)">
+            </div>
+
+            <!-- Condition -->
+            <div class="mb-5">
+              <h4 class="text-sm font-semibold text-surface-700 mb-2">Состояние</h4>
+              <label class="flex items-center gap-2 py-1 cursor-pointer text-sm text-surface-600 hover:text-surface-800">
+                <input type="checkbox" ${State.filters.condition==='all'||State.filters.condition==='new'?'checked':''} onchange="updateFilter('condition','all',this.checked)" class="rounded border-surface-300 text-primary-600 focus:ring-primary-500">
+                Все
+              </label>
+              <label class="flex items-center gap-2 py-1 cursor-pointer text-sm text-surface-600 hover:text-surface-800">
+                <input type="checkbox" ${State.filters.condition==='new'?'checked':''} onchange="updateFilter('condition','new',this.checked)" class="rounded border-surface-300 text-primary-600 focus:ring-primary-500">
+                Новые
+              </label>
+              <label class="flex items-center gap-2 py-1 cursor-pointer text-sm text-surface-600 hover:text-surface-800">
+                <input type="checkbox" ${State.filters.condition==='used'?'checked':''} onchange="updateFilter('condition','used',this.checked)" class="rounded border-surface-300 text-primary-600 focus:ring-primary-500">
+                Б/У
+              </label>
+            </div>
+
+            <button onclick="applyFilters()" class="w-full bg-primary-600 text-white py-2.5 rounded-xl font-medium hover:bg-primary-700 transition-colors">Применить фильтры</button>
+          </div>
+        </aside>
+        ` : ''}
+
+        <!-- Main content -->
+        <div class="flex-1">
+          
+          ${State.catalogView === 'products' ? `
+            <!-- Toolbar for Products -->
+            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
+              <div class="flex items-center gap-3">
+                <button onclick="openOffcanvas()" class="md:hidden flex items-center gap-2 bg-white border border-surface-200 px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-surface-50 transition-colors">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/></svg>
+                  Фильтры
+                  ${activeFilters.length > 0 ? `<span class="w-5 h-5 bg-primary-600 text-white text-xs rounded-full flex items-center justify-center">${activeFilters.length}</span>` : ''}
+                </button>
+                <span class="text-sm text-surface-500">Найдено: <strong class="text-surface-800">${sortedProducts.length}</strong> товаров</span>
+              </div>
+              <select onchange="State.sort=this.value;renderCurrentPage()" class="bg-white border border-surface-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+                <option value="popular" ${State.sort==='popular'?'selected':''}>По популярности</option>
+                <option value="price_asc" ${State.sort==='price_asc'?'selected':''}>Сначала дешёвые</option>
+                <option value="price_desc" ${State.sort==='price_desc'?'selected':''}>Сначала дорогие</option>
+                <option value="rating" ${State.sort==='rating'?'selected':''}>По рейтингу</option>
+                <option value="newest" ${State.sort==='newest'?'selected':''}>Новинки</option>
+              </select>
+            </div>
+
+            <!-- Products Grid -->
+            ${sortedProducts.length > 0 ? `
+              <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
+                ${sortedProducts.map(p => renderProductCard(p)).join('')}
+              </div>
+            ` : `
+              <div class="text-center py-16">
+                <div class="text-6xl mb-4">🔍</div>
+                <h3 class="text-xl font-bold text-surface-800 mb-2">Товары не найдены</h3>
+                <p class="text-surface-500 mb-4">Попробуйте изменить параметры поиска или фильтры</p>
+                <button onclick="resetAllFilters()" class="bg-primary-600 text-white px-6 py-2.5 rounded-xl font-medium hover:bg-primary-700 transition-colors">Сбросить фильтры</button>
+              </div>
+            `}
+          ` : `
+            <!-- Sellers View -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              ${sellersList.map(seller => renderSellerCard(seller)).join('')}
+            </div>
+          `}
+          
+        </div>
+      </div>
+    </div>
+  `;
+
+  if (State.catalogView === 'products') {
+    renderOffcanvasFilters();
+  }
+}
+
+function setCatalogView(view) {
+  State.catalogView = view;
+  renderCurrentPage();
+}
+
+function renderSellerCard(seller) {
+  // Подсчитаем кол-во товаров у продавца
+  const sellerOffers = OFFERS.filter(o => o.sellerId === seller.id);
+  const uniqueProducts = new Set();
+  sellerOffers.forEach(o => {
+    const v = VARIANTS.find(variant => variant.id === o.variantId);
+    if(v) uniqueProducts.add(v.productId);
+  });
+
+  return `
+    <div class="bg-white rounded-2xl shadow-sm border border-surface-100 p-5 hover:shadow-lg transition-all flex flex-col justify-between">
+      <div>
+        <div class="flex gap-4 items-center mb-4">
+          <div class="w-14 h-14 bg-surface-100 rounded-xl flex items-center justify-center text-3xl flex-shrink-0">${seller.logo}</div>
+          <div>
+            <h3 class="font-bold text-surface-800 text-lg flex items-center gap-1">
+              ${seller.name}
+              ${seller.isVerified ? '<svg class="w-4 h-4 text-primary-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>' : ''}
+            </h3>
+            <div class="flex items-center gap-1 text-sm text-surface-500">
+              <span class="text-amber-400 font-bold">${seller.rating} ★</span>
+              <span>(${seller.reviewsCount} отз.)</span>
+            </div>
+          </div>
+        </div>
+        <div class="text-sm text-surface-600 mb-2 flex items-center gap-2">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+          г. Бишкек
+        </div>
+        <div class="text-sm text-surface-600 mb-4 flex items-center gap-2">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+          В наличии: ${uniqueProducts.size} товаров
+        </div>
+      </div>
+      <button onclick="setCatalogView('products'); updateFilter('seller','${seller.id}',true); applyFilters();" class="w-full bg-primary-50 text-primary-700 py-2.5 rounded-xl font-medium hover:bg-primary-100 transition-colors">Перейти к товарам</button>
+    </div>
+  `;
+}
+
+function getFilteredProducts() {
+  let products = [...PRODUCTS];
+
+  if (State.filters.category) {
+    products = products.filter(p => p.category === State.filters.category);
+  }
+  if (State.filters.brand) {
+    products = products.filter(p => p.brand === State.filters.brand);
+  }
+  if (State.filters.seller) {
+    products = products.filter(p => {
+      return OFFERS.some(o => {
+        const v = VARIANTS.find(vr => vr.id === o.variantId);
+        return v && v.productId === p.id && o.sellerId === State.filters.seller;
+      });
+    });
+  }
+  if (State.filters.search) {
+    const q = State.filters.search.toLowerCase();
+    products = products.filter(p =>
+      p.name.toLowerCase().includes(q) ||
+      p.description.toLowerCase().includes(q) ||
+      p.brand.toLowerCase().includes(q)
+    );
+  }
+
+  if (State.filters.priceMin > 0 || State.filters.priceMax < 999999) {
+    products = products.filter(p => {
+      const offers = OFFERS.filter(o => {
+        const v = VARIANTS.find(vr => vr.id === o.variantId);
+        // Применяем фильтр к продавцу и в ценах тоже
+        if (State.filters.seller && o.sellerId !== State.filters.seller) return false;
+        return v && v.productId === p.id && o.condition === 'NEW';
+      });
+      const prices = offers.map(o => o.price);
+      if (prices.length === 0) return false;
+      const minP = Math.min(...prices);
+      const maxP = Math.max(...prices);
+      if (State.filters.priceMin > 0 && maxP < State.filters.priceMin) return false;
+      if (State.filters.priceMax < 999999 && minP > State.filters.priceMax) return false;
+      return true;
+    });
+  }
+
+  if (State.filters.condition === 'new') {
+    products = products.filter(p => {
+      return OFFERS.some(o => {
+        const v = VARIANTS.find(vr => vr.id === o.variantId);
+        return v && v.productId === p.id && o.condition === 'NEW';
+      });
+    });
+  } else if (State.filters.condition === 'used') {
+    products = products.filter(p => {
+      return OFFERS.some(o => {
+        const v = VARIANTS.find(vr => vr.id === o.variantId);
+        return v && v.productId === p.id && o.condition !== 'NEW';
+      });
+    });
+  }
+
+  return products;
+}
+
+function sortProducts(products) {
+  switch (State.sort) {
+    case 'price_asc':
+      return products.sort((a, b) => {
+        const aOffers = OFFERS.filter(o => VARIANTS.find(v => v.id === o.variantId)?.productId === a.id && o.condition === 'NEW');
+        const bOffers = OFFERS.filter(o => VARIANTS.find(v => v.id === o.variantId)?.productId === b.id && o.condition === 'NEW');
+        const aMin = aOffers.length > 0 ? Math.min(...aOffers.map(o => o.price)) : Infinity;
+        const bMin = bOffers.length > 0 ? Math.min(...bOffers.map(o => o.price)) : Infinity;
+        return aMin - bMin;
+      });
+    case 'price_desc':
+      return products.sort((a, b) => {
+        const aOffers = OFFERS.filter(o => VARIANTS.find(v => v.id === o.variantId)?.productId === a.id && o.condition === 'NEW');
+        const bOffers = OFFERS.filter(o => VARIANTS.find(v => v.id === o.variantId)?.productId === b.id && o.condition === 'NEW');
+        const aMin = aOffers.length > 0 ? Math.min(...aOffers.map(o => o.price)) : 0;
+        const bMin = bOffers.length > 0 ? Math.min(...bOffers.map(o => o.price)) : 0;
+        return bMin - aMin;
+      });
+    case 'rating':
+      return products.sort((a, b) => b.rating - a.rating);
+    case 'newest':
+      return products.filter(p => p.label === 'Новинка').concat(products.filter(p => p.label !== 'Новинка'));
+    default:
+      return products.sort((a, b) => b.reviewsCount - a.reviewsCount);
+  }
+}
+
+function updateFilter(key, value, checked) {
+  if (key === 'category' || key === 'brand' || key === 'seller') {
+    State.filters[key] = checked ? value : (State.filters[key] === value ? '' : value);
+  } else if (key === 'condition') {
+    State.filters[key] = checked ? value : 'all';
+  } else {
+    State.filters[key] = parseFloat(value) || 0;
+    if (key === 'priceMax' && parseFloat(value) >= 999999) State.filters[key] = 999999;
+  }
+}
+
+function removeFilter(key) {
+  if (key === 'priceMin') State.filters[key] = 0;
+  else if (key === 'priceMax') State.filters[key] = 999999;
+  else State.filters[key] = '';
+  renderCurrentPage();
+}
+
+function applyFilters() {
+  trackEvent('filter_apply', State.filters);
+  renderCurrentPage();
+}
+
+function resetAllFilters() {
+  State.filters = { category:'', brand:'', seller:'', priceMin:0, priceMax:999999, condition:'all', storage:'all', color:'all', search:'' };
+  State.sort = 'popular';
+  renderCurrentPage();
+}
+
+// ===== OFFCANVAS FILTERS =====
+function renderOffcanvasFilters() {
+  const container = document.getElementById('offcanvasFilters');
+  if (!container) return;
+  container.innerHTML = `
+    <div class="p-4 space-y-5">
+      <!-- Category -->
+      <div>
+        <h4 class="text-sm font-semibold text-surface-700 mb-2">Категория</h4>
+        <div class="space-y-1">
+          ${CATEGORIES.map(cat => `
+            <label class="flex items-center gap-2 py-1.5 cursor-pointer text-sm text-surface-600">
+              <input type="checkbox" ${State.filters.category===cat.id?'checked':''} onchange="updateFilter('category','${cat.id}',this.checked)" class="rounded border-surface-300 text-primary-600 focus:ring-primary-500">
+              ${cat.icon} ${cat.name}
+            </label>
+          `).join('')}
+        </div>
+      </div>
+      <!-- Brand -->
+      <div>
+        <h4 class="text-sm font-semibold text-surface-700 mb-2">Бренд</h4>
+        <div class="space-y-1">
+          ${BRANDS.map(brand => `
+            <label class="flex items-center gap-2 py-1.5 cursor-pointer text-sm text-surface-600">
+              <input type="checkbox" ${State.filters.brand===brand.id?'checked':''} onchange="updateFilter('brand','${brand.id}',this.checked)" class="rounded border-surface-300 text-primary-600 focus:ring-primary-500">
+              ${brand.icon} ${brand.name}
+            </label>
+          `).join('')}
+        </div>
+      </div>
+      <!-- Price -->
+      <div>
+        <h4 class="text-sm font-semibold text-surface-700 mb-2">Цена, сом</h4>
+        <div class="flex gap-2 mb-3">
+          <input type="number" placeholder="От" value="${State.filters.priceMin||''}" onchange="updateFilter('priceMin',this.value)" class="w-full px-3 py-2 border border-surface-200 rounded-lg text-sm">
+          <input type="number" placeholder="До" value="${State.filters.priceMax<999999?State.filters.priceMax:''}" onchange="updateFilter('priceMax',this.value)" class="w-full px-3 py-2 border border-surface-200 rounded-lg text-sm">
+        </div>
+      </div>
+      <!-- Condition -->
+      <div>
+        <h4 class="text-sm font-semibold text-surface-700 mb-2">Состояние</h4>
+        <label class="flex items-center gap-2 py-1.5 cursor-pointer text-sm text-surface-600">
+          <input type="checkbox" ${State.filters.condition==='new'?'checked':''} onchange="updateFilter('condition','new',this.checked)" class="rounded border-surface-300 text-primary-600 focus:ring-primary-500">
+          Новые
+        </label>
+        <label class="flex items-center gap-2 py-1.5 cursor-pointer text-sm text-surface-600">
+          <input type="checkbox" ${State.filters.condition==='used'?'checked':''} onchange="updateFilter('condition','used',this.checked)" class="rounded border-surface-300 text-primary-600 focus:ring-primary-500">
+          Б/У
+        </label>
+      </div>
+    </div>
+  `;
+}
+
+function openOffcanvas() {
+  document.getElementById('offcanvasOverlay').classList.remove('hidden');
+  setTimeout(() => {
+    document.getElementById('offcanvasPanel').style.transform = 'translateX(0)';
+  }, 10);
+}
+
+function closeOffcanvas() {
+  document.getElementById('offcanvasPanel').style.transform = 'translateX(-100%)';
+  setTimeout(() => {
+    document.getElementById('offcanvasOverlay').classList.add('hidden');
+  }, 300);
+}
+
+function applyOffcanvasFilters() {
+  trackEvent('filter_apply', State.filters);
+  closeOffcanvas();
+  setTimeout(() => renderCurrentPage(), 300);
+}
+
+// ===== PRODUCT PAGE =====
+function renderProductPage(app, slug, params) {
+  const product = PRODUCTS.find(p => p.slug === slug);
+  if (!product) {
+    app.innerHTML = `<div class="max-w-7xl mx-auto px-4 py-16 text-center"><h2 class="text-2xl font-bold mb-4">Товар не найден</h2><a href="#/catalog" class="text-primary-600 hover:underline">Вернуться в каталог</a></div>`;
+    return;
+  }
+
+  const variants = VARIANTS.filter(v => v.productId === product.id);
+  const productOffers = OFFERS.filter(o => variants.some(v => v.id === o.variantId));
+  const newOffers = productOffers.filter(o => o.condition === 'NEW');
+  const usedOffers = productOffers.filter(o => o.condition !== 'NEW');
+
+  const newPrices = newOffers.map(o => o.price);
+  const usedPrices = usedOffers.map(o => o.price);
+  const minNewPrice = newPrices.length > 0 ? Math.min(...newPrices) : 0;
+  const maxNewPrice = newPrices.length > 0 ? Math.max(...newPrices) : 0;
+  const minUsedPrice = usedPrices.length > 0 ? Math.min(...usedPrices) : 0;
+
+  const productReviews = REVIEWS.filter(r => r.productId === product.id);
+  const ratingDist = { 5:0, 4:0, 3:0, 2:0, 1:0 };
+  productReviews.forEach(r => ratingDist[r.rating] = (ratingDist[r.rating] || 0) + 1);
+
+  const selectedVariantId = params.variant || variants[0]?.id || '';
+  const selectedVariant = VARIANTS.find(v => v.id === selectedVariantId) || variants[0];
+
+  const variantOffers = productOffers.filter(o => o.variantId === selectedVariantId);
+  const variantNewOffers = variantOffers.filter(o => o.condition === 'NEW').sort((a,b) => a.price - b.price);
+  const variantUsedOffers = variantOffers.filter(o => o.condition !== 'NEW').sort((a,b) => a.price - b.price);
+
+  const specsEntries = Object.entries(product.specs);
+  const halfIdx = Math.ceil(specsEntries.length / 2);
+  const specsLeft = specsEntries.slice(0, halfIdx);
+  const specsRight = specsEntries.slice(halfIdx);
+
+  const category = CATEGORIES.find(c => c.id === product.category);
+  const brand = BRANDS.find(b => b.id === product.brand);
+
+  // Global access for Map Logic
+  window._currentNewOffers = variantNewOffers;
+  window._currentUsedOffers = variantUsedOffers;
+  window._currentProductMap = null;
+  window._currentMapMarkers = [];
+  window._currentMapMarkersDict = {};
+
+  const schema = {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    "name": product.name,
+    "description": product.description,
+    "image": product.images[0],
+    "brand": { "@type": "Brand", "name": brand?.name || '' },
+    "aggregateRating": {
+      "@type": "AggregateRating",
+      "ratingValue": product.rating,
+      "reviewCount": product.reviewsCount
+    },
+    "offers": {
+      "@type": "AggregateOffer",
+      "priceCurrency": "KGS",
+      "lowPrice": minNewPrice,
+      "highPrice": maxNewPrice,
+      "offerCount": newOffers.length
+    }
+  };
+
+  app.innerHTML = `
+    <script type="application/ld+json">${JSON.stringify(schema)}<\/script>
+
+    <!-- Breadcrumbs -->
+    <div class="max-w-7xl mx-auto px-4 py-3">
+      <nav class="flex items-center gap-2 text-sm text-surface-500 flex-wrap">
+        <a href="#/" class="hover:text-primary-600">Главная</a>
+        <svg class="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+        <a href="#/catalog" class="hover:text-primary-600">Каталог</a>
+        <svg class="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+        ${category ? `<a href="#/catalog?category=${category.id}" class="hover:text-primary-600">${category.name}</a><svg class="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>` : ''}
+        <span class="text-surface-800">${product.name}</span>
+      </nav>
+    </div>
+
+    <div class="max-w-7xl mx-auto px-4 pb-12">
+      <!-- Block 1: Summary -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10">
+        <!-- Gallery -->
+        <div>
+          <div class="bg-surface-50 rounded-2xl overflow-hidden mb-3">
+            <img id="mainProductImage" src="${product.images[0]}" alt="${product.name}" class="w-full h-64 sm:h-80 md:h-96 object-contain p-6">
+          </div>
+          <div class="flex gap-2 overflow-x-auto scrollbar-hide pb-2">
+            ${product.images.map((img, i) => `
+              <button onclick="changeMainImage('${img}')" class="gallery-thumb ${i===0?'active':''} flex-shrink-0 w-16 h-16 bg-surface-50 rounded-xl border-2 border-transparent overflow-hidden">
+                <img src="${img}" alt="" class="w-full h-full object-contain p-1">
+              </button>
+            `).join('')}
+          </div>
+        </div>
+
+        <!-- Info -->
+        <div>
+          <h1 class="text-2xl md:text-3xl font-bold text-surface-800 mb-3" itemprop="name">${product.name}</h1>
+
+          <div class="flex items-center gap-3 mb-4">
+            <div class="flex items-center gap-1">${renderStars(product.rating, 'w-4 h-4')}</div>
+            <span class="text-sm font-medium text-surface-700">${product.rating}</span>
+            <a href="#reviews" class="text-sm text-primary-600 hover:underline">(${product.reviewsCount} отзывов)</a>
+          </div>
+
+          ${product.label ? `<span class="inline-block ${product.label==='Новинка'?'bg-accent-500':product.label==='Хит'?'bg-orange-500':'bg-green-500'} text-white text-xs font-bold px-3 py-1 rounded-lg mb-4">${product.label}</span>` : ''}
+
+          <!-- Quick specs -->
+          <div class="grid grid-cols-2 gap-2 mb-6">
+            ${specsEntries.slice(0, 4).map(([k,v]) => `
+              <div class="bg-surface-50 rounded-xl p-3">
+                <div class="text-xs text-surface-400">${k}</div>
+                <div class="text-sm font-medium text-surface-700">${v}</div>
+              </div>
+            `).join('')}
+          </div>
+
+          <!-- Price block -->
+          <div class="bg-gradient-to-br from-primary-50 to-accent-50 rounded-2xl p-5 border border-primary-100 mb-6">
+            <div class="flex items-center justify-between mb-3">
+              <span class="text-sm text-surface-600">Доступно предложений:</span>
+              <span class="text-sm font-bold text-primary-700">${productOffers.length}</span>
+            </div>
+            ${minNewPrice > 0 ? `
+              <div class="flex items-end gap-2 mb-2">
+                <span class="text-xs text-surface-500">Новые:</span>
+                <span class="text-lg font-bold text-surface-800">${minNewPrice.toLocaleString()} — ${maxNewPrice.toLocaleString()} сом</span>
+              </div>
+            ` : ''}
+            ${minUsedPrice > 0 ? `
+              <div class="flex items-end gap-2">
+                <span class="text-xs text-surface-500">Б/У:</span>
+                <span class="text-lg font-bold text-surface-800">от ${minUsedPrice.toLocaleString()} сом</span>
+              </div>
+            ` : ''}
+            <button onclick="document.getElementById('offersBlock').scrollIntoView({behavior:'smooth'})" class="mt-4 w-full bg-primary-600 text-white py-3 rounded-xl font-semibold hover:bg-primary-700 transition-colors flex items-center justify-center gap-2">
+              Сравнить цены
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+            </button>
+          </div>
+
+          <!-- Variant selector -->
+          ${variants.length > 1 ? `
+            <div class="mb-4">
+              <h4 class="text-sm font-semibold text-surface-700 mb-2">Варианты:</h4>
+              <div class="flex flex-wrap gap-2">
+                ${variants.map(v => `
+                  <a href="#/product/${product.slug}?variant=${v.id}" class="px-4 py-2 rounded-xl text-sm border ${selectedVariantId===v.id?'border-primary-600 bg-primary-50 text-primary-700':'border-surface-200 text-surface-600 hover:border-primary-300'} transition-colors">
+                    ${Object.values(v.attributes).join(' / ')}
+                  </a>
+                `).join('')}
+              </div>
+            </div>
+          ` : ''}
+        </div>
+      </div>
+
+      <!-- Block 2: Offers -->
+      <div id="offersBlock" class="mb-10">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-2xl font-bold text-surface-800">Предложения продавцов</h2>
+        </div>
+
+        <!-- Map Container -->
+        <div id="offersMap" class="w-full h-64 md:h-80 bg-surface-100 rounded-2xl border border-surface-200 mb-6 overflow-hidden relative z-10 shadow-inner"></div>
+
+        <!-- Tabs -->
+        <div class="flex border-b border-surface-200 mb-6">
+          <button onclick="switchConditionTab('new')" id="tabNew" class="tab-active px-6 py-3 text-sm font-semibold transition-colors">
+            Новые (${newOffers.length})
+          </button>
+          <button onclick="switchConditionTab('used')" id="tabUsed" class="px-6 py-3 text-sm font-semibold text-surface-500 hover:text-surface-700 transition-colors">
+            Б/У (${usedOffers.length})
+          </button>
+        </div>
+
+        <!-- New offers -->
+        <div id="offersNew" class="space-y-3">
+          ${variantNewOffers.length > 0 ? variantNewOffers.map(offer => renderOfferRow(offer, 'NEW')).join('') :
+            newOffers.length > 0 ? `<p class="text-surface-500 text-sm">Для выбранного варианта нет предложений. Выберите другой вариант или посмотрите все предложения.</p>` :
+            '<p class="text-surface-500 text-sm">Нет предложений для новых товаров.</p>'
+          }
+        </div>
+
+        <!-- Used offers -->
+        <div id="offersUsed" class="space-y-3 hidden">
+          ${variantUsedOffers.length > 0 ? variantUsedOffers.map(offer => renderOfferRow(offer, 'USED')).join('') :
+            usedOffers.length > 0 ? `<p class="text-surface-500 text-sm">Для выбранного варианта нет предложений б/у.</p>` :
+            '<p class="text-surface-500 text-sm">Нет предложений для б/у товаров.</p>'
+          }
+        </div>
+      </div>
+
+      <!-- Block 3: Specifications -->
+      <div class="mb-10">
+        <h2 class="text-2xl font-bold text-surface-800 mb-4">Характеристики</h2>
+        <div class="bg-white rounded-2xl shadow-sm border border-surface-100 overflow-hidden">
+          <div class="grid grid-cols-1 md:grid-cols-2">
+            <div class="divide-y divide-surface-100">
+              ${specsLeft.map(([k,v]) => `
+                <div class="flex justify-between px-5 py-3.5">
+                  <span class="text-sm text-surface-500">${k}</span>
+                  <span class="text-sm font-medium text-surface-800">${v}</span>
+                </div>
+              `).join('')}
+            </div>
+            <div class="divide-y divide-surface-100">
+              ${specsRight.map(([k,v]) => `
+                <div class="flex justify-between px-5 py-3.5">
+                  <span class="text-sm text-surface-500">${k}</span>
+                  <span class="text-sm font-medium text-surface-800">${v}</span>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Block 4: Description -->
+      <div class="mb-10">
+        <h2 class="text-2xl font-bold text-surface-800 mb-4">Описание</h2>
+        <div class="bg-white rounded-2xl shadow-sm border border-surface-100 p-5 md:p-8 prose prose-surface max-w-none">
+          <p class="text-surface-600 leading-relaxed">${product.description}</p>
+        </div>
+      </div>
+
+      <!-- Block 5: Reviews -->
+      <div id="reviews" class="mb-10">
+        <h2 class="text-2xl font-bold text-surface-800 mb-4">Отзывы (${productReviews.length})</h2>
+
+        <!-- Rating distribution -->
+        <div class="bg-white rounded-2xl shadow-sm border border-surface-100 p-5 mb-6">
+          <div class="flex flex-col md:flex-row gap-6">
+            <div class="flex flex-col items-center min-w-[120px]">
+              <div class="text-4xl font-bold text-surface-800">${product.rating}</div>
+              <div class="flex items-center gap-1 my-2">${renderStars(product.rating, 'w-5 h-5')}</div>
+              <div class="text-sm text-surface-500">${product.reviewsCount} отзывов</div>
+            </div>
+            <div class="flex-1 space-y-2">
+              ${[5,4,3,2,1].map(star => {
+                const count = ratingDist[star] || 0;
+                const pct = productReviews.length > 0 ? (count / productReviews.length * 100) : 0;
+                return `
+                  <div class="flex items-center gap-3">
+                    <span class="text-sm text-surface-600 w-6">${star}</span>
+                    <svg class="w-4 h-4 star-rating flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+                    <div class="flex-1 h-2 bg-surface-100 rounded-full overflow-hidden">
+                      <div class="h-full bg-amber-400 rounded-full transition-all" style="width:${pct}%"></div>
+                    </div>
+                    <span class="text-sm text-surface-500 w-8 text-right">${count}</span>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
+          <button onclick="openReviewModal('${product.id}')" class="mt-5 bg-primary-600 text-white px-6 py-2.5 rounded-xl font-medium hover:bg-primary-700 transition-colors">
+            Оставить отзыв
+          </button>
+        </div>
+
+        <!-- Reviews list -->
+        <div class="space-y-4">
+          ${productReviews.length > 0 ? productReviews.map(r => `
+            <div class="bg-white rounded-2xl shadow-sm border border-surface-100 p-5">
+              <div class="flex items-center justify-between mb-3">
+                <div class="flex items-center gap-3">
+                  <div class="w-10 h-10 bg-primary-100 rounded-full flex items-center justify-center text-primary-700 font-bold text-sm">${r.author[0]}</div>
+                  <div>
+                    <div class="font-semibold text-surface-800 text-sm">${r.author}</div>
+                    <div class="text-xs text-surface-400">${r.date}</div>
+                  </div>
+                </div>
+                <div class="flex items-center gap-1">${renderStars(r.rating, 'w-4 h-4')}</div>
+              </div>
+              ${r.pros ? `<div class="mb-2"><span class="text-xs font-semibold text-green-600">Достоинства:</span> <span class="text-sm text-surface-600">${r.pros}</span></div>` : ''}
+              ${r.cons ? `<div class="mb-2"><span class="text-xs font-semibold text-red-500">Недостатки:</span> <span class="text-sm text-surface-600">${r.cons}</span></div>` : ''}
+              <p class="text-sm text-surface-600">${r.comment}</p>
+            </div>
+          `).join('') : '<p class="text-surface-500 text-center py-8">Отзывов пока нет. Будьте первым!</p>'}
+        </div>
+      </div>
+    </div>
+  `;
+
+  // Set initial tab state and map
+  window._currentConditionTab = 'new';
+  setTimeout(() => {
+    initOffersMap(variantNewOffers);
+  }, 100);
+}
+
+function renderOfferRow(offer, tabType) {
+  const variant = VARIANTS.find(v => v.id === offer.variantId);
+  const product = PRODUCTS.find(p => p.id === variant?.productId);
+  const seller = SELLERS.find(s => s.id === offer.sellerId);
+  if (!seller || !product) return '';
+
+  const conditionLabels = {
+    NEW: '<span class="bg-green-100 text-green-700 text-xs font-medium px-2 py-0.5 rounded">Новое</span>',
+    USED_EXCELLENT: '<span class="bg-blue-100 text-blue-700 text-xs font-medium px-2 py-0.5 rounded">Идеальное</span>',
+    USED_GOOD: '<span class="bg-amber-100 text-amber-700 text-xs font-medium px-2 py-0.5 rounded">Хорошее</span>',
+    USED_POOR: '<span class="bg-orange-100 text-orange-700 text-xs font-medium px-2 py-0.5 rounded">Есть царапины</span>',
+  };
+
+  return `
+    <div class="bg-white rounded-xl shadow-sm border border-surface-100 p-4 md:p-5 hover:shadow-md transition-shadow cursor-pointer border-l-4 border-l-transparent hover:border-l-primary-500" 
+         onmouseenter="focusMapMarker('${seller.id}')" onclick="focusMapMarker('${seller.id}')"
+         itemscope itemtype="https://schema.org/Offer">
+      <div class="flex flex-col md:flex-row md:items-center gap-4">
+        <!-- Seller info -->
+        <div class="flex items-center gap-3 flex-1 min-w-0">
+          <div class="w-12 h-12 bg-surface-100 rounded-xl flex items-center justify-center text-xl flex-shrink-0">${seller.logo}</div>
+          <div class="min-w-0">
+            <div class="flex items-center gap-2">
+              <span class="font-semibold text-surface-800 text-sm" itemprop="seller">${seller.name}</span>
+              ${seller.isVerified ? '<svg class="w-4 h-4 text-primary-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>' : ''}
+            </div>
+            <div class="flex items-center gap-1 text-xs text-surface-500">
+              <svg class="w-3 h-3 star-rating" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+              ${seller.rating} (${seller.reviewsCount})
+            </div>
+          </div>
+        </div>
+
+        <!-- Details -->
+        <div class="flex flex-wrap items-center gap-3 md:gap-6">
+          ${tabType === 'USED' ? `
+            <div class="flex items-center gap-2">
+              ${conditionLabels[offer.condition] || conditionLabels.NEW}
+              ${offer.batteryHealth ? `<span class="text-xs text-surface-500">АКБ: ${offer.batteryHealth}%</span>` : ''}
+              ${offer.usedImages ? `<button onclick="event.stopPropagation(); showUsedPhotos([${offer.usedImages.map(u=>`'${u}'`).join(',')}])" class="text-xs text-primary-600 hover:underline">Фото (${offer.usedImages.length})</button>` : ''}
+            </div>
+          ` : ''}
+          <div class="text-xs text-surface-500">${offer.warrantyInfo}</div>
+          <span class="bg-green-50 text-green-700 text-xs font-medium px-2 py-0.5 rounded">В наличии</span>
+        </div>
+
+        <!-- Price and CTA -->
+        <div class="flex items-center gap-4 md:flex-shrink-0">
+          <span class="text-xl font-bold text-surface-800" itemprop="price">${offer.price.toLocaleString()} сом</span>
+          <button onclick="event.stopPropagation(); trackEvent('offer_click',{productId:'${product.id}',sellerId:'${seller.id}',condition:'${offer.condition}',price:${offer.price}});window.open('${seller.targetUrl}','_blank')" class="bg-primary-600 text-white px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-primary-700 transition-colors whitespace-nowrap">
+            В магазин →
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function switchConditionTab(tab) {
+  window._currentConditionTab = tab;
+  trackEvent('tab_switch_condition', { tab });
+
+  const tabNew = document.getElementById('tabNew');
+  const tabUsed = document.getElementById('tabUsed');
+  const offersNew = document.getElementById('offersNew');
+  const offersUsed = document.getElementById('offersUsed');
+
+  if (tab === 'new') {
+    tabNew.className = 'tab-active px-6 py-3 text-sm font-semibold transition-colors';
+    tabUsed.className = 'px-6 py-3 text-sm font-semibold text-surface-500 hover:text-surface-700 transition-colors';
+    offersNew.classList.remove('hidden');
+    offersUsed.classList.add('hidden');
+    updateMapMarkers(window._currentNewOffers || []);
+  } else {
+    tabNew.className = 'px-6 py-3 text-sm font-semibold text-surface-500 hover:text-surface-700 transition-colors';
+    tabUsed.className = 'tab-active px-6 py-3 text-sm font-semibold transition-colors';
+    offersNew.classList.add('hidden');
+    offersUsed.classList.remove('hidden');
+    updateMapMarkers(window._currentUsedOffers || []);
+  }
+}
+
+function changeMainImage(src) {
+  const img = document.getElementById('mainProductImage');
+  if (img) img.src = src;
+  document.querySelectorAll('.gallery-thumb').forEach(t => t.classList.remove('active'));
+  event.target.closest('.gallery-thumb')?.classList.add('active');
+}
+
+function showUsedPhotos(images) {
+  const modal = document.getElementById('usedPhotosModal');
+  const content = document.getElementById('usedPhotosContent');
+  content.innerHTML = `
+    <h3 class="text-lg font-bold text-white mb-4">Фото реального устройства</h3>
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      ${images.map(img => `<img src="${img}" alt="Фото б/у устройства" class="rounded-xl w-full h-48 object-contain bg-surface-100">`).join('')}
+    </div>
+  `;
+  modal.classList.remove('hidden');
+}
+
+function closeUsedPhotosModal() {
+  document.getElementById('usedPhotosModal').classList.add('hidden');
+}
+
+// ===== FAVORITES PAGE =====
+function renderFavoritesPage(app) {
+  const favProducts = PRODUCTS.filter(p => State.favorites.includes(p.id));
+
+  app.innerHTML = `
+    <div class="max-w-7xl mx-auto px-4 py-6 md:py-10">
+      <h1 class="text-2xl md:text-3xl font-bold text-surface-800 mb-6">❤️ Избранное</h1>
+      ${favProducts.length > 0 ? `
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-4">
+          ${favProducts.map(p => renderProductCard(p)).join('')}
+        </div>
+      ` : `
+        <div class="text-center py-16">
+          <div class="text-6xl mb-4">💔</div>
+          <h3 class="text-xl font-bold text-surface-800 mb-2">Список избранного пуст</h3>
+          <p class="text-surface-500 mb-6">Добавляйте товары в избранное, нажимая на сердечко</p>
+          <a href="#/catalog" class="bg-primary-600 text-white px-6 py-3 rounded-xl font-medium hover:bg-primary-700 transition-colors inline-block">Перейти в каталог</a>
+        </div>
+      `}
+    </div>
+  `;
+}
+
+// ===== SEARCH =====
+function handleSearch(query) {
+  clearTimeout(State.searchTimeout);
+  const dropdown = document.getElementById('searchDropdown');
+  const results = document.getElementById('searchResults');
+
+  if (query.length < 2) {
+    dropdown.classList.remove('show');
+    return;
+  }
+
+  State.searchTimeout = setTimeout(() => {
+    const q = query.toLowerCase();
+    const matchedProducts = PRODUCTS.filter(p =>
+      p.name.toLowerCase().includes(q) ||
+      p.brand.toLowerCase().includes(q) ||
+      p.description.toLowerCase().includes(q)
+    ).slice(0, 5);
+
+    const matchedCategories = CATEGORIES.filter(c =>
+      c.name.toLowerCase().includes(q)
+    ).slice(0, 3);
+
+    const suggestions = ['iPhone 17 Pro', 'Samsung Galaxy', 'AirPods Pro', 'Чехол iPhone', 'Зарядка быстрая'].filter(s => s.toLowerCase().includes(q)).slice(0, 3);
+
+    let html = '';
+
+    if (suggestions.length > 0) {
+      html += `<div class="p-3 border-b border-surface-100"><div class="text-xs text-surface-400 mb-2">Подсказки</div>${suggestions.map(s => `<button onclick="document.getElementById('globalSearch').value='${s}';handleSearch('${s}');navigate('/catalog?search=${encodeURIComponent(s)}')" class="flex items-center gap-2 w-full text-left px-2 py-1.5 rounded-lg hover:bg-surface-50 text-sm text-surface-600"><svg class="w-4 h-4 text-surface-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>${s}</button>`).join('')}</div>`;
+    }
+
+    if (matchedCategories.length > 0) {
+      html += `<div class="p-3 border-b border-surface-100"><div class="text-xs text-surface-400 mb-2">Категории</div>${matchedCategories.map(c => `<a href="#/catalog?category=${c.id}" onclick="document.getElementById('globalSearch').value='';document.getElementById('searchDropdown').classList.remove('show')" class="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-surface-50 text-sm text-surface-600"><span>${c.icon}</span>${c.name}</a>`).join('')}</div>`;
+    }
+
+    if (matchedProducts.length > 0) {
+      html += `<div class="p-3"><div class="text-xs text-surface-400 mb-2">Товары</div>${matchedProducts.map(p => {
+        const prices = OFFERS.filter(o => VARIANTS.find(v => v.id === o.variantId)?.productId === p.id && o.condition === 'NEW').map(o => o.price);
+        const minPrice = prices.length > 0 ? Math.min(...prices) : 0;
+        return `<a href="#/product/${p.slug}" onclick="document.getElementById('globalSearch').value='';document.getElementById('searchDropdown').classList.remove('show')" class="flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-surface-50"><img src="${p.images[0]}" class="w-10 h-10 object-contain bg-surface-50 rounded-lg p-1"><div><div class="text-sm font-medium text-surface-800">${p.name}</div><div class="text-xs text-surface-500">от ${minPrice.toLocaleString()} сом</div></div></a>`;
+      }).join('')}</div>`;
+    }
+
+    if (!html) {
+      html = '<div class="p-4 text-center text-sm text-surface-500">Ничего не найдено</div>';
+    }
+
+    results.innerHTML = html;
+    dropdown.classList.add('show');
+  }, 200);
+}
+
+// ===== AUTH MODAL =====
+function openAuthModal() {
+  if (State.user) {
+    openProfileModal();
+    return;
+  }
+  const modal = document.getElementById('authModal');
+  const content = document.getElementById('authModalContent');
+  content.innerHTML = `
+    <h2 class="text-2xl font-bold text-surface-800 mb-6">Вход в аккаунт</h2>
+    <form onsubmit="handleLogin(event)" class="space-y-4">
+      <div>
+        <label class="block text-sm font-medium text-surface-700 mb-1">Email</label>
+        <input type="email" required value="user@example.com" class="w-full px-4 py-3 border border-surface-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-surface-700 mb-1">Пароль</label>
+        <input type="password" required value="password" class="w-full px-4 py-3 border border-surface-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+      </div>
+      <button type="submit" class="w-full bg-primary-600 text-white py-3 rounded-xl font-semibold hover:bg-primary-700 transition-colors">Войти</button>
+    </form>
+    <p class="text-center text-sm text-surface-500 mt-4">Нет аккаунта? <button onclick="showRegisterForm()" class="text-primary-600 hover:underline font-medium">Зарегистрироваться</button></p>
+  `;
+  modal.classList.remove('hidden');
+}
+
+function showRegisterForm() {
+  const content = document.getElementById('authModalContent');
+  content.innerHTML = `
+    <h2 class="text-2xl font-bold text-surface-800 mb-6">Регистрация</h2>
+    <form onsubmit="handleRegister(event)" class="space-y-4">
+      <div>
+        <label class="block text-sm font-medium text-surface-700 mb-1">Имя</label>
+        <input type="text" required id="regName" placeholder="Ваше имя" class="w-full px-4 py-3 border border-surface-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-surface-700 mb-1">Email</label>
+        <input type="email" required id="regEmail" placeholder="email@example.com" class="w-full px-4 py-3 border border-surface-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-surface-700 mb-1">Пароль</label>
+        <input type="password" required id="regPass" placeholder="Минимум 6 символов" class="w-full px-4 py-3 border border-surface-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+      </div>
+      <button type="submit" class="w-full bg-primary-600 text-white py-3 rounded-xl font-semibold hover:bg-primary-700 transition-colors">Зарегистрироваться</button>
+    </form>
+    <p class="text-center text-sm text-surface-500 mt-4">Уже есть аккаунт? <button onclick="openAuthModal()" class="text-primary-600 hover:underline font-medium">Войти</button></p>
+  `;
+}
+
+function handleLogin(e) {
+  e.preventDefault();
+  State.user = { name: 'Кутман', email: 'user@example.com' };
+  saveState();
+  closeAuthModal();
+  showToast('Вы успешно вошли!', 'success');
+  updateProfileButton();
+}
+
+function handleRegister(e) {
+  e.preventDefault();
+  const name = document.getElementById('regName').value;
+  State.user = { name, email: document.getElementById('regEmail').value };
+  saveState();
+  closeAuthModal();
+  showToast(`Добро пожаловать, ${name}!`, 'success');
+  updateProfileButton();
+}
+
+function closeAuthModal() {
+  document.getElementById('authModal').classList.add('hidden');
+}
+
+function openProfileModal() {
+  const modal = document.getElementById('authModal');
+  const content = document.getElementById('authModalContent');
+  content.innerHTML = `
+    <div class="text-center mb-6">
+      <div class="w-20 h-20 bg-gradient-to-br from-primary-500 to-accent-500 rounded-full flex items-center justify-center text-white text-3xl font-bold mx-auto mb-3">${State.user.name[0]}</div>
+      <h2 class="text-xl font-bold text-surface-800">${State.user.name}</h2>
+      <p class="text-sm text-surface-500">${State.user.email}</p>
+    </div>
+    <div class="space-y-3">
+      <a href="#/favorites" onclick="closeAuthModal()" class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-surface-50 transition-colors">
+        <svg class="w-5 h-5 text-surface-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
+        <span class="text-sm font-medium">Избранное (${State.favorites.length})</span>
+      </a>
+      <div class="border-t border-surface-100 pt-3">
+        <button onclick="handleLogout()" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-red-50 text-red-600 transition-colors">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+          <span class="text-sm font-medium">Выйти</span>
+        </button>
+      </div>
+    </div>
+  `;
+  modal.classList.remove('hidden');
+}
+
+function handleLogout() {
+  State.user = null;
+  saveState();
+  closeAuthModal();
+  showToast('Вы вышли из аккаунта', 'info');
+  updateProfileButton();
+}
+
+function updateProfileButton() {
+  const btn = document.getElementById('profileBtn');
+  if (State.user) {
+    btn.innerHTML = `<div class="w-8 h-8 bg-gradient-to-br from-primary-500 to-accent-500 rounded-full flex items-center justify-center text-white text-sm font-bold">${State.user.name[0]}</div>`;
+  } else {
+    btn.innerHTML = `<svg class="w-6 h-6 text-surface-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>`;
+  }
+}
+
+// ===== REVIEW MODAL =====
+function openReviewModal(productId) {
+  if (!State.user) {
+    openAuthModal();
+    showToast('Для оставления отзыва необходимо войти', 'warning');
+    return;
+  }
+  const modal = document.getElementById('authModal');
+  const content = document.getElementById('authModalContent');
+  content.innerHTML = `
+    <h2 class="text-xl font-bold text-surface-800 mb-4">Оставить отзыв</h2>
+    <form onsubmit="submitReview(event, '${productId}')" class="space-y-4">
+      <div>
+        <label class="block text-sm font-medium text-surface-700 mb-1">Оценка</label>
+        <div class="flex gap-1" id="reviewStars">
+          ${[1,2,3,4,5].map(i => `<button type="button" onclick="setReviewRating(${i})" class="review-star w-8 h-8 text-surface-300 hover:text-amber-400 transition-colors" data-rating="${i}"><svg fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg></button>`).join('')}
+        </div>
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-surface-700 mb-1">Достоинства</label>
+        <input type="text" id="reviewPros" class="w-full px-4 py-3 border border-surface-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-surface-700 mb-1">Недостатки</label>
+        <input type="text" id="reviewCons" class="w-full px-4 py-3 border border-surface-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-surface-700 mb-1">Комментарий</label>
+        <textarea id="reviewComment" rows="3" class="w-full px-4 py-3 border border-surface-200 rounded-xl text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none"></textarea>
+      </div>
+      <button type="submit" class="w-full bg-primary-600 text-white py-3 rounded-xl font-semibold hover:bg-primary-700 transition-colors">Отправить отзыв</button>
+    </form>
+  `;
+  modal.classList.remove('hidden');
+  window._reviewRating = 0;
+}
+
+function setReviewRating(rating) {
+  window._reviewRating = rating;
+  document.querySelectorAll('.review-star').forEach((star, i) => {
+    star.classList.toggle('text-amber-400', i < rating);
+    star.classList.toggle('text-surface-300', i >= rating);
+  });
+}
+
+function submitReview(e, productId) {
+  e.preventDefault();
+  if (!window._reviewRating) {
+    showToast('Пожалуйста, поставьте оценку', 'warning');
+    return;
+  }
+  const review = {
+    productId,
+    author: State.user.name,
+    date: new Date().toISOString().split('T')[0],
+    rating: window._reviewRating,
+    pros: document.getElementById('reviewPros').value,
+    cons: document.getElementById('reviewCons').value,
+    comment: document.getElementById('reviewComment').value,
+  };
+  REVIEWS.push(review);
+  closeAuthModal();
+  showToast('Отзыв опубликован!', 'success');
+  renderCurrentPage();
+}
+
+// ===== MEGA MENU =====
+function showMegaMenu() {
+  document.getElementById('megaMenu').classList.add('show');
+}
+
+function hideMegaMenu() {
+  document.getElementById('megaMenu').classList.remove('show');
+}
+
+// ===== MOBILE MENU =====
+function toggleMobileMenu() {
+  const btn = document.getElementById('hamburgerBtn');
+  btn.classList.toggle('hamburger-open');
+  if (btn.classList.contains('hamburger-open')) {
+    openOffcanvas();
+    const container = document.getElementById('offcanvasFilters');
+    container.innerHTML = `
+      <div class="p-4 space-y-2">
+        <a href="#/" onclick="closeOffcanvas()" class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-surface-50 text-surface-700 font-medium">
+          <svg class="w-5 h-5 text-surface-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+          Главная
+        </a>
+        <a href="#/catalog" onclick="closeOffcanvas()" class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-surface-50 text-surface-700 font-medium">
+          <svg class="w-5 h-5 text-surface-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
+          Каталог
+        </a>
+        <a href="#/favorites" onclick="closeOffcanvas()" class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-surface-50 text-surface-700 font-medium">
+          <svg class="w-5 h-5 text-surface-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
+          Избранное
+        </a>
+        <div class="border-t border-surface-100 my-2"></div>
+        <div class="px-4 py-2 text-xs text-surface-400">Категории</div>
+        ${CATEGORIES.map(cat => `
+          <a href="#/catalog?category=${cat.id}" onclick="closeOffcanvas()" class="flex items-center gap-3 px-4 py-2.5 rounded-xl hover:bg-surface-50 text-sm text-surface-600">
+            ${cat.icon} ${cat.name}
+          </a>
+        `).join('')}
+      </div>
+    `;
+    const applyBtn = document.querySelector('#offcanvasPanel .sticky button:first-child');
+    if (applyBtn) applyBtn.textContent = 'Закрыть';
+  }
+}
+
+// ===== CITY MODAL =====
+function openCityModal() {
+  const modal = document.getElementById('authModal');
+  const content = document.getElementById('authModalContent');
+  const cities = ['Бишкек', 'Ош', 'Джалал-Абад', 'Каракол', 'Токмок', 'Нарын', 'Талас', 'Баткен'];
+  content.innerHTML = `
+    <h2 class="text-xl font-bold text-surface-800 mb-4">Выберите город</h2>
+    <div class="space-y-2 max-h-60 overflow-y-auto">
+      ${cities.map(city => `
+        <button onclick="selectCity('${city}')" class="w-full text-left px-4 py-3 rounded-xl hover:bg-primary-50 text-surface-700 font-medium transition-colors ${document.getElementById('selectedCity')?.textContent === city ? 'bg-primary-50 text-primary-700' : ''}">
+          ${city}
+        </button>
+      `).join('')}
+    </div>
+  `;
+  modal.classList.remove('hidden');
+}
+
+function selectCity(city) {
+  document.getElementById('selectedCity').textContent = city;
+  closeAuthModal();
+  showToast(`Город изменён: ${city}`, 'info');
+}
+
+// ===== TRACKING =====
+function trackEvent(eventName, data) {
+  console.log(`[Analytics] ${eventName}:`, data);
+}
+
+// ===== INIT =====
+function init() {
+  updateFavBadge();
+  updateProfileButton();
+  renderPage();
+
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('#searchContainer')) {
+      document.getElementById('searchDropdown').classList.remove('show');
+    }
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      closeAuthModal();
+      closeUsedPhotosModal();
+      closeOffcanvas();
+    }
+  });
+
+  let lastScroll = 0;
+  window.addEventListener('scroll', () => {
+    const header = document.getElementById('mainHeader');
+    if (window.scrollY > 10) {
+      header.classList.add('shadow-md');
+    } else {
+      header.classList.remove('shadow-md');
+    }
+    lastScroll = window.scrollY;
+  }, { passive: true });
+}
+
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
